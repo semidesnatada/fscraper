@@ -1,0 +1,1 @@
+cd "sql/schema" && goose postgres "postgres://seanlowery:@localhost:5432/fscraped" up
