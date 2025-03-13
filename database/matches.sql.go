@@ -7,51 +7,103 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 const createMatch = `-- name: CreateMatch :one
-INSERT INTO matches (id, home_team, away_team, home_goals, away_goals)
+INSERT INTO matches (id, competition_id, competition_season_id, home_team_id, away_team_id,
+home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday)
 VALUES (
     $1,
     $2,
     $3,
     $4,
-    $5
+    $5,
+    $6,
+    $7,
+    $8,
+    $9,
+    $10,
+    $11,
+    $12,
+    $13,
+    $14,
+    $15
 )
-RETURNING id, home_team, away_team, home_goals, away_goals
+RETURNING id, competition_id, competition_season_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday
 `
 
 type CreateMatchParams struct {
-	ID        uuid.UUID
-	HomeTeam  string
-	AwayTeam  string
-	HomeGoals int32
-	AwayGoals int32
+	ID                  uuid.UUID
+	CompetitionID       uuid.UUID
+	CompetitionSeasonID string
+	HomeTeamID          uuid.UUID
+	AwayTeamID          uuid.UUID
+	HomeGoals           int32
+	AwayGoals           int32
+	Date                time.Time
+	KickOffTime         sql.NullTime
+	RefereeID           uuid.NullUUID
+	VenueID             uuid.NullUUID
+	Attendance          sql.NullInt32
+	HomeXg              sql.NullFloat64
+	AwayXg              sql.NullFloat64
+	Weekday             string
 }
 
 func (q *Queries) CreateMatch(ctx context.Context, arg CreateMatchParams) (Match, error) {
 	row := q.db.QueryRowContext(ctx, createMatch,
 		arg.ID,
-		arg.HomeTeam,
-		arg.AwayTeam,
+		arg.CompetitionID,
+		arg.CompetitionSeasonID,
+		arg.HomeTeamID,
+		arg.AwayTeamID,
 		arg.HomeGoals,
 		arg.AwayGoals,
+		arg.Date,
+		arg.KickOffTime,
+		arg.RefereeID,
+		arg.VenueID,
+		arg.Attendance,
+		arg.HomeXg,
+		arg.AwayXg,
+		arg.Weekday,
 	)
 	var i Match
 	err := row.Scan(
 		&i.ID,
-		&i.HomeTeam,
-		&i.AwayTeam,
+		&i.CompetitionID,
+		&i.CompetitionSeasonID,
+		&i.HomeTeamID,
+		&i.AwayTeamID,
 		&i.HomeGoals,
 		&i.AwayGoals,
+		&i.Date,
+		&i.KickOffTime,
+		&i.RefereeID,
+		&i.VenueID,
+		&i.Attendance,
+		&i.HomeXg,
+		&i.AwayXg,
+		&i.Weekday,
 	)
 	return i, err
 }
 
+const deleteMatches = `-- name: DeleteMatches :exec
+DELETE FROM matches
+`
+
+func (q *Queries) DeleteMatches(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deleteMatches)
+	return err
+}
+
 const getMatches = `-- name: GetMatches :many
-SELECT id, home_team, away_team, home_goals, away_goals FROM matches
+SELECT id, competition_id, competition_season_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday FROM matches
 `
 
 func (q *Queries) GetMatches(ctx context.Context) ([]Match, error) {
@@ -65,10 +117,64 @@ func (q *Queries) GetMatches(ctx context.Context) ([]Match, error) {
 		var i Match
 		if err := rows.Scan(
 			&i.ID,
-			&i.HomeTeam,
-			&i.AwayTeam,
+			&i.CompetitionID,
+			&i.CompetitionSeasonID,
+			&i.HomeTeamID,
+			&i.AwayTeamID,
 			&i.HomeGoals,
 			&i.AwayGoals,
+			&i.Date,
+			&i.KickOffTime,
+			&i.RefereeID,
+			&i.VenueID,
+			&i.Attendance,
+			&i.HomeXg,
+			&i.AwayXg,
+			&i.Weekday,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMatchesByClub = `-- name: GetMatchesByClub :many
+SELECT id, competition_id, competition_season_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday FROM matches
+WHERE home_team_id = $1 or away_team_id = $1
+`
+
+func (q *Queries) GetMatchesByClub(ctx context.Context, homeTeamID uuid.UUID) ([]Match, error) {
+	rows, err := q.db.QueryContext(ctx, getMatchesByClub, homeTeamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Match
+	for rows.Next() {
+		var i Match
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompetitionID,
+			&i.CompetitionSeasonID,
+			&i.HomeTeamID,
+			&i.AwayTeamID,
+			&i.HomeGoals,
+			&i.AwayGoals,
+			&i.Date,
+			&i.KickOffTime,
+			&i.RefereeID,
+			&i.VenueID,
+			&i.Attendance,
+			&i.HomeXg,
+			&i.AwayXg,
+			&i.Weekday,
 		); err != nil {
 			return nil, err
 		}

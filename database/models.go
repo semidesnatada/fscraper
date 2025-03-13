@@ -5,13 +5,46 @@
 package database
 
 import (
+	"database/sql"
+	"time"
+
 	"github.com/google/uuid"
 )
 
+type Competition struct {
+	ID   uuid.UUID
+	Name string
+}
+
 type Match struct {
-	ID        uuid.UUID
-	HomeTeam  string
-	AwayTeam  string
-	HomeGoals int32
-	AwayGoals int32
+	ID                  uuid.UUID
+	CompetitionID       uuid.UUID
+	CompetitionSeasonID string
+	HomeTeamID          uuid.UUID
+	AwayTeamID          uuid.UUID
+	HomeGoals           int32
+	AwayGoals           int32
+	Date                time.Time
+	KickOffTime         sql.NullTime
+	RefereeID           uuid.NullUUID
+	VenueID             uuid.NullUUID
+	Attendance          sql.NullInt32
+	HomeXg              sql.NullFloat64
+	AwayXg              sql.NullFloat64
+	Weekday             string
+}
+
+type Referee struct {
+	ID   uuid.UUID
+	Name string
+}
+
+type Team struct {
+	ID   uuid.UUID
+	Name string
+}
+
+type Venue struct {
+	ID   uuid.UUID
+	Name string
 }
