@@ -1,1 +1,1 @@
-cd "sql/schema" && goose postgres "postgres://seanlowery:@localhost:5432/fscraped" down && goose postgres "postgres://seanlowery:@localhost:5432/fscraped" up
+cd "sql/schema" && goose postgres "postgres://seanlowery:@localhost:5432/fscraped" down-to 0 && goose postgres "postgres://seanlowery:@localhost:5432/fscraped" up

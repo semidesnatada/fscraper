@@ -123,3 +123,72 @@ func (q *Queries) GetCompetitionNameAndSeasonFromId(ctx context.Context, id uuid
 	err := row.Scan(&i.Name, &i.Season)
 	return i, err
 }
+
+const getCompetitionTable = `-- name: GetCompetitionTable :many
+SELECT 
+    teams.name AS team_name,
+    SUM(matches.home_goals) AS goals_scored,
+    SUM(matches.away_goals) AS goals_conceded,
+    COUNT(*) AS games_played,
+    SUM(matches.home_goals) - SUM(matches.away_goals) AS goal_difference,
+    SUM(CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END) AS wins,
+    SUM(CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END) AS draws,
+    SUM(CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END) AS losses,
+    SUM((CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END)) AS points
+FROM teams
+INNER JOIN matches ON matches.home_team_id = teams.id
+INNER JOIN competitions ON matches.competition_id = competitions.id
+WHERE competitions.name = $1 AND competitions.season = $2
+GROUP BY team_name
+ORDER BY points DESC, goal_difference DESC, goals_scored DESC, goals_conceded DESC, wins DESC
+`
+
+type GetCompetitionTableParams struct {
+	Name   string
+	Season string
+}
+
+type GetCompetitionTableRow struct {
+	TeamName       string
+	GoalsScored    int64
+	GoalsConceded  int64
+	GamesPlayed    int64
+	GoalDifference int32
+	Wins           int64
+	Draws          int64
+	Losses         int64
+	Points         int64
+}
+
+func (q *Queries) GetCompetitionTable(ctx context.Context, arg GetCompetitionTableParams) ([]GetCompetitionTableRow, error) {
+	rows, err := q.db.QueryContext(ctx, getCompetitionTable, arg.Name, arg.Season)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCompetitionTableRow
+	for rows.Next() {
+		var i GetCompetitionTableRow
+		if err := rows.Scan(
+			&i.TeamName,
+			&i.GoalsScored,
+			&i.GoalsConceded,
+			&i.GamesPlayed,
+			&i.GoalDifference,
+			&i.Wins,
+			&i.Draws,
+			&i.Losses,
+			&i.Points,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

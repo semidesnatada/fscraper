@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/semidesnatada/fscraper/config"
@@ -17,15 +19,62 @@ func main() {
 	const DB_URL = "postgres://seanlowery:@localhost:5432/fscraped?sslmode=disable"
 	s := config.CreateState(DB_URL)
 
+	seasonName := "Premier-League"
+	seasonYear := "2023-2024"
+
+	rows, err := s.DB.GetCompetitionTable(
+		context.Background(),
+		database.GetCompetitionTableParams{
+			Name: seasonName,
+			Season: seasonYear,
+		},
+	)
+	if err != nil {
+		fmt.Printf("error getting table %s\n", err.Error())
+		os.Exit(1)
+	}
+	fmt.Println()
+	fmt.Println("===========================================================================================")
+	fmt.Printf("%s %s\n",seasonName, seasonYear)
+	fmt.Println("===========================================================================================")
+	fmt.Println("  Team  			P	W	D	L	GF	GA	GD	PTS")
+	for place, row := range rows {
+		var strPlace string
+		if place < 9 {
+			strPlace = strconv.Itoa(place + 1) + " " 
+		} else {
+			strPlace = strconv.Itoa(place + 1)
+		}
+		teamName := row.TeamName + strings.Repeat(" ", 20 - len(row.TeamName))
+
+		fmt.Printf("%s %s       	%d	%d	%d	%d	%d	%d	%d	%d\n",
+			strPlace, teamName, row.GamesPlayed, row.Wins, row.Draws, row.Losses, row.GoalsScored, row.GoalsConceded, row.GoalDifference, row.Points)
+	}
+	fmt.Println("===========================================================================================")
+	fmt.Println()
 
 	// s.DeleteDatabases()	
 	// client.ScrapeLeagues(&s)
 
+	// GetGamesTest(&s)
+
+
+	fmt.Println("===================================================")
+	fmt.Println()
+	fmt.Println("Script concluded")
+	fmt.Println()
+	fmt.Println("===================================================")
+
+	os.Exit(0)
+}
+
+
+func GetGamesTest(s *config.State) {
 	games, err := s.DB.GetGamesByTeamAndSeason(
 		context.Background(),
 		database.GetGamesByTeamAndSeasonParams{
-			Name: "Liverpool",
-			Season: "2015-2016",
+			Name: "Newcastle Utd",
+			Season: "1996-1997",
 			
 		},
 	)
@@ -42,13 +91,4 @@ func main() {
 		fmt.Printf("%v , 	%s\n",game.Date.Format(time.DateOnly),game.Stadium)
 		fmt.Println("=================================")
 	}
-
-
-	fmt.Println("===================================================")
-	fmt.Println()
-	fmt.Println("Script concluded")
-	fmt.Println()
-	fmt.Println("===================================================")
-
-	os.Exit(0)
 }
