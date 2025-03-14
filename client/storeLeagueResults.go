@@ -16,16 +16,19 @@ import (
 
 func StoreMatchSummaries(s *config.State, matches CompetitionSeasonSummary) error {
 
-	for _, match := range matches.Data {
-		// compID, compErr := s.DB.GetCompetitionIdFromName(
-		// 	context.Background(),
-		// 	matches.CompetitionName,
-		// )
-		// if compErr != nil {
-		// 	return compErr
-		// }
 
-		matchParams := database.CreateMatchParams{}
+	// compID := uuid.New()
+
+	compID, compErr := handleComp(s, matches)
+	if compErr != nil {
+		return compErr
+	}
+
+	for _, match := range matches.Data {
+
+		matchParams := database.CreateMatchParams{
+			CompetitionID: compID,
+		}
 
 		err := processMatch(s, match, &matchParams)
 		if err != nil {
@@ -50,17 +53,17 @@ func StoreMatchSummaries(s *config.State, matches CompetitionSeasonSummary) erro
 }
 
 func processMatch(s *config.State, match MatchSummary, temp *database.CreateMatchParams) ( error) {
-	compID := uuid.New()
-	homeID, homeErr :=  handleHome(s, match, true)
+
+	homeID, homeErr :=  handleTeam(s, match, true)
 	if homeErr != nil {
 		return homeErr
 	}
-	// fmt.Println("success: home_team")
-	awayID, awayErr :=  handleHome(s, match, false)
+	// fmt.Printf("success: home_team %s \n", match.data["home_team"])
+	awayID, awayErr :=  handleTeam(s, match, false)
 	if awayErr != nil {
 		return awayErr
 	}
-	// fmt.Println("success: away_team")
+	// fmt.Printf("success: away_team %s \n", match.data["away_team"])
 	date, dateErr := handleDate(match)
 	if dateErr != nil {
 		return dateErr
@@ -107,9 +110,9 @@ func processMatch(s *config.State, match MatchSummary, temp *database.CreateMatc
 	}
 	// fmt.Println("success: weekday")
 
+	// fmt.Println(match.data["match-report"])
+
 	temp.ID = uuid.New()
-	temp.CompetitionID = compID
-	temp.CompetitionSeasonID = "21-22"
 	temp.HomeTeamID = homeID
 	temp.AwayTeamID = awayID
 	temp.HomeGoals = goals[0]
@@ -122,11 +125,12 @@ func processMatch(s *config.State, match MatchSummary, temp *database.CreateMatc
 	temp.HomeXg = homeXG
 	temp.AwayXg = awayXG
 	temp.Weekday = weekday
+	temp.Url = match.data["match-report"]
 
 	return  nil
 }
 
-func handleHome(s *config.State, match MatchSummary, homeOrAway bool) (uuid.UUID, error) {
+func handleTeam(s *config.State, match MatchSummary, homeOrAway bool) (uuid.UUID, error) {
 	var teamName string
 	var ok bool
 	
@@ -271,6 +275,51 @@ func handleKickoff(match MatchSummary) (sql.NullTime, error) {
 	}
 	return kickoff, nil
 }
+
+func handleComp(s *config.State, matches CompetitionSeasonSummary) (uuid.UUID, error) {
+
+	name := matches.CompetitionName
+	season := matches.CompetitionSeason
+	url := matches.Url
+
+	exists, getErr := s.DB.CheckIfCompetitionExistsByNameAndSeason(
+		context.Background(),
+		database.CheckIfCompetitionExistsByNameAndSeasonParams{
+			Name: name,
+			Season: season,
+		},
+	)
+	if getErr != nil {
+		return uuid.UUID{}, getErr
+	}
+	if exists {
+		compID, fetchErr := s.DB.GetCompetitionIdFromNameAndSeason(
+			context.Background(),
+			database.GetCompetitionIdFromNameAndSeasonParams{
+				Name: name,
+				Season: season,
+			},
+		)
+		if fetchErr != nil {
+			return uuid.UUID{}, fetchErr
+		}
+		return compID, nil
+	}
+
+	comp, createErr := s.DB.CreateCompetition(
+		context.Background(),
+		database.CreateCompetitionParams{
+			ID: uuid.New(),
+			Name: name,
+			Season: season,
+			Url: url,
+	})
+	if createErr != nil {
+		return uuid.UUID{}, createErr
+	}
+	return comp.ID, nil
+}
+
 
 func handleReferee(s *config.State, match MatchSummary) (uuid.NullUUID, error) {
 	var referee uuid.NullUUID

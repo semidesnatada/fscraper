@@ -12,26 +12,28 @@ import (
 )
 
 type Competition struct {
-	ID   uuid.UUID
-	Name string
+	ID     uuid.UUID
+	Name   string
+	Season string
+	Url    string
 }
 
 type Match struct {
-	ID                  uuid.UUID
-	CompetitionID       uuid.UUID
-	CompetitionSeasonID string
-	HomeTeamID          uuid.UUID
-	AwayTeamID          uuid.UUID
-	HomeGoals           int32
-	AwayGoals           int32
-	Date                time.Time
-	KickOffTime         sql.NullTime
-	RefereeID           uuid.NullUUID
-	VenueID             uuid.NullUUID
-	Attendance          sql.NullInt32
-	HomeXg              sql.NullFloat64
-	AwayXg              sql.NullFloat64
-	Weekday             string
+	ID            uuid.UUID
+	CompetitionID uuid.UUID
+	HomeTeamID    uuid.UUID
+	AwayTeamID    uuid.UUID
+	HomeGoals     int32
+	AwayGoals     int32
+	Date          time.Time
+	KickOffTime   sql.NullTime
+	RefereeID     uuid.NullUUID
+	VenueID       uuid.NullUUID
+	Attendance    sql.NullInt32
+	HomeXg        sql.NullFloat64
+	AwayXg        sql.NullFloat64
+	Weekday       string
+	Url           string
 }
 
 type Referee struct {

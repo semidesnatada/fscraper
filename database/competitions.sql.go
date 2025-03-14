@@ -25,38 +25,57 @@ func (q *Queries) CheckIfCompetitionExistsById(ctx context.Context, id uuid.UUID
 	return exists, err
 }
 
-const checkIfCompetitionExistsByName = `-- name: CheckIfCompetitionExistsByName :one
+const checkIfCompetitionExistsByNameAndSeason = `-- name: CheckIfCompetitionExistsByNameAndSeason :one
 SELECT EXISTS (SELECT 1
 FROM competitions
-WHERE name = $1
+WHERE name = $1 AND season = $2
 LIMIT 1)
 `
 
-func (q *Queries) CheckIfCompetitionExistsByName(ctx context.Context, name string) (bool, error) {
-	row := q.db.QueryRowContext(ctx, checkIfCompetitionExistsByName, name)
+type CheckIfCompetitionExistsByNameAndSeasonParams struct {
+	Name   string
+	Season string
+}
+
+func (q *Queries) CheckIfCompetitionExistsByNameAndSeason(ctx context.Context, arg CheckIfCompetitionExistsByNameAndSeasonParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, checkIfCompetitionExistsByNameAndSeason, arg.Name, arg.Season)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
 }
 
 const createCompetition = `-- name: CreateCompetition :one
-INSERT INTO competitions (id, name)
+INSERT INTO competitions (id, name, season, url)
 VALUES (
     $1,
-    $2
+    $2,
+    $3,
+    $4
 )
-RETURNING id, name
+RETURNING id, name, season, url
 `
 
 type CreateCompetitionParams struct {
-	ID   uuid.UUID
-	Name string
+	ID     uuid.UUID
+	Name   string
+	Season string
+	Url    string
 }
 
 func (q *Queries) CreateCompetition(ctx context.Context, arg CreateCompetitionParams) (Competition, error) {
-	row := q.db.QueryRowContext(ctx, createCompetition, arg.ID, arg.Name)
+	row := q.db.QueryRowContext(ctx, createCompetition,
+		arg.ID,
+		arg.Name,
+		arg.Season,
+		arg.Url,
+	)
 	var i Competition
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Season,
+		&i.Url,
+	)
 	return i, err
 }
 
@@ -69,28 +88,38 @@ func (q *Queries) DeleteCompetitions(ctx context.Context) error {
 	return err
 }
 
-const getCompetitionIdFromName = `-- name: GetCompetitionIdFromName :one
+const getCompetitionIdFromNameAndSeason = `-- name: GetCompetitionIdFromNameAndSeason :one
 SELECT id
 FROM competitions
-WHERE name = $1
+WHERE name = $1 AND season = $2
 `
 
-func (q *Queries) GetCompetitionIdFromName(ctx context.Context, name string) (uuid.UUID, error) {
-	row := q.db.QueryRowContext(ctx, getCompetitionIdFromName, name)
+type GetCompetitionIdFromNameAndSeasonParams struct {
+	Name   string
+	Season string
+}
+
+func (q *Queries) GetCompetitionIdFromNameAndSeason(ctx context.Context, arg GetCompetitionIdFromNameAndSeasonParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, getCompetitionIdFromNameAndSeason, arg.Name, arg.Season)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
 }
 
-const getCompetitionNameFromId = `-- name: GetCompetitionNameFromId :one
-SELECT name
+const getCompetitionNameAndSeasonFromId = `-- name: GetCompetitionNameAndSeasonFromId :one
+SELECT name, season
 FROM competitions
 WHERE id = $1
 `
 
-func (q *Queries) GetCompetitionNameFromId(ctx context.Context, id uuid.UUID) (string, error) {
-	row := q.db.QueryRowContext(ctx, getCompetitionNameFromId, id)
-	var name string
-	err := row.Scan(&name)
-	return name, err
+type GetCompetitionNameAndSeasonFromIdRow struct {
+	Name   string
+	Season string
+}
+
+func (q *Queries) GetCompetitionNameAndSeasonFromId(ctx context.Context, id uuid.UUID) (GetCompetitionNameAndSeasonFromIdRow, error) {
+	row := q.db.QueryRowContext(ctx, getCompetitionNameAndSeasonFromId, id)
+	var i GetCompetitionNameAndSeasonFromIdRow
+	err := row.Scan(&i.Name, &i.Season)
+	return i, err
 }

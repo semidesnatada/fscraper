@@ -9,7 +9,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-func ParseLeagueResults(res http.Response) CompetitionSeasonSummary {
+func ParseLeagueResults(res http.Response, compData CompetitionSeasonSummary) []MatchSummary {
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 		
@@ -44,7 +44,8 @@ func ParseLeagueResults(res http.Response) CompetitionSeasonSummary {
 		}
 		matchesData = append(matchesData, matchMap)
 	}
-	return CompetitionSeasonSummary{Data: matchesData, CompetitionName: "Premier League", CompetitionSeason: "21-22"}
+	return matchesData
+	// return CompetitionSeasonSummary{Data: matchesData, CompetitionName: "Premier League", CompetitionSeason: "21-22"}
 }
 
 func parseColumn(column *html.Node, matches MatchSummary) {
@@ -76,14 +77,22 @@ func parseColumn(column *html.Node, matches MatchSummary) {
 			}
 		}
 	case "score":
+		var i int
 		for child := range column.Descendants(){
-			if len(child.Attr) > 0 {
-				matches.data["match-report"] = child.Attr[0].Val
-				// fmt.Println(child.Attr[0].Val)
-			} else {
-				matches.data[statType] = child.Data
-				// fmt.Println(child.Data)
-			}
+			//need this i counter to prevent unusual scores (e.g. Real Madrid 10-2 Rayo Vallecano) from breaking the code
+			if i > 1 {break}
+				if len(child.Attr) > 0 {
+					matches.data["match-report"] = child.Attr[0].Val
+					// fmt.Println("child.Attr[0].Val")
+					// fmt.Println(child.Attr[0].Val)
+					// fmt.Println("child.Attr")
+					// fmt.Println(child.Attr)
+				} else {
+					matches.data[statType] = child.Data
+					// fmt.Println("child.Data")
+					// fmt.Println(child.Data)
+				}
+			i += 1
 		}
 	case "attendance", "venue", "referee", "dayofweek", "home_xg", "away_xg":
 		for child := range column.Descendants(){
@@ -141,4 +150,5 @@ type CompetitionSeasonSummary struct {
 	Data []MatchSummary
 	CompetitionName string
 	CompetitionSeason string
+	Url string
 }

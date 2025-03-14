@@ -14,8 +14,8 @@ import (
 )
 
 const createMatch = `-- name: CreateMatch :one
-INSERT INTO matches (id, competition_id, competition_season_id, home_team_id, away_team_id,
-home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday)
+INSERT INTO matches (id, competition_id, home_team_id, away_team_id,
+home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday, url)
 VALUES (
     $1,
     $2,
@@ -33,32 +33,31 @@ VALUES (
     $14,
     $15
 )
-RETURNING id, competition_id, competition_season_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday
+RETURNING id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday, url
 `
 
 type CreateMatchParams struct {
-	ID                  uuid.UUID
-	CompetitionID       uuid.UUID
-	CompetitionSeasonID string
-	HomeTeamID          uuid.UUID
-	AwayTeamID          uuid.UUID
-	HomeGoals           int32
-	AwayGoals           int32
-	Date                time.Time
-	KickOffTime         sql.NullTime
-	RefereeID           uuid.NullUUID
-	VenueID             uuid.NullUUID
-	Attendance          sql.NullInt32
-	HomeXg              sql.NullFloat64
-	AwayXg              sql.NullFloat64
-	Weekday             string
+	ID            uuid.UUID
+	CompetitionID uuid.UUID
+	HomeTeamID    uuid.UUID
+	AwayTeamID    uuid.UUID
+	HomeGoals     int32
+	AwayGoals     int32
+	Date          time.Time
+	KickOffTime   sql.NullTime
+	RefereeID     uuid.NullUUID
+	VenueID       uuid.NullUUID
+	Attendance    sql.NullInt32
+	HomeXg        sql.NullFloat64
+	AwayXg        sql.NullFloat64
+	Weekday       string
+	Url           string
 }
 
 func (q *Queries) CreateMatch(ctx context.Context, arg CreateMatchParams) (Match, error) {
 	row := q.db.QueryRowContext(ctx, createMatch,
 		arg.ID,
 		arg.CompetitionID,
-		arg.CompetitionSeasonID,
 		arg.HomeTeamID,
 		arg.AwayTeamID,
 		arg.HomeGoals,
@@ -71,12 +70,12 @@ func (q *Queries) CreateMatch(ctx context.Context, arg CreateMatchParams) (Match
 		arg.HomeXg,
 		arg.AwayXg,
 		arg.Weekday,
+		arg.Url,
 	)
 	var i Match
 	err := row.Scan(
 		&i.ID,
 		&i.CompetitionID,
-		&i.CompetitionSeasonID,
 		&i.HomeTeamID,
 		&i.AwayTeamID,
 		&i.HomeGoals,
@@ -89,6 +88,7 @@ func (q *Queries) CreateMatch(ctx context.Context, arg CreateMatchParams) (Match
 		&i.HomeXg,
 		&i.AwayXg,
 		&i.Weekday,
+		&i.Url,
 	)
 	return i, err
 }
@@ -102,8 +102,68 @@ func (q *Queries) DeleteMatches(ctx context.Context) error {
 	return err
 }
 
+const getGamesByTeamAndSeason = `-- name: GetGamesByTeamAndSeason :many
+SELECT 
+HT.name as home_team, 
+AT.name as away_team, 
+M.home_goals as home_goals, 
+M.away_goals as away_goals,
+M.date as date,
+venues.name as stadium
+FROM matches as M
+INNER JOIN teams as HT on HT.id = M.home_team_id
+INNER JOIN teams as AT on AT.id = M.away_team_id
+INNER JOIN competitions on competitions.id = M.competition_id
+INNER JOIN venues on M.venue_id = venues.id
+WHERE (HT.name = $1 OR AT.name = $1) AND competitions.season = $2
+`
+
+type GetGamesByTeamAndSeasonParams struct {
+	Name   string
+	Season string
+}
+
+type GetGamesByTeamAndSeasonRow struct {
+	HomeTeam  string
+	AwayTeam  string
+	HomeGoals int32
+	AwayGoals int32
+	Date      time.Time
+	Stadium   string
+}
+
+func (q *Queries) GetGamesByTeamAndSeason(ctx context.Context, arg GetGamesByTeamAndSeasonParams) ([]GetGamesByTeamAndSeasonRow, error) {
+	rows, err := q.db.QueryContext(ctx, getGamesByTeamAndSeason, arg.Name, arg.Season)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGamesByTeamAndSeasonRow
+	for rows.Next() {
+		var i GetGamesByTeamAndSeasonRow
+		if err := rows.Scan(
+			&i.HomeTeam,
+			&i.AwayTeam,
+			&i.HomeGoals,
+			&i.AwayGoals,
+			&i.Date,
+			&i.Stadium,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMatches = `-- name: GetMatches :many
-SELECT id, competition_id, competition_season_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday FROM matches
+SELECT id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday, url FROM matches
 `
 
 func (q *Queries) GetMatches(ctx context.Context) ([]Match, error) {
@@ -118,7 +178,6 @@ func (q *Queries) GetMatches(ctx context.Context) ([]Match, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.CompetitionID,
-			&i.CompetitionSeasonID,
 			&i.HomeTeamID,
 			&i.AwayTeamID,
 			&i.HomeGoals,
@@ -131,6 +190,7 @@ func (q *Queries) GetMatches(ctx context.Context) ([]Match, error) {
 			&i.HomeXg,
 			&i.AwayXg,
 			&i.Weekday,
+			&i.Url,
 		); err != nil {
 			return nil, err
 		}
@@ -146,7 +206,7 @@ func (q *Queries) GetMatches(ctx context.Context) ([]Match, error) {
 }
 
 const getMatchesByClub = `-- name: GetMatchesByClub :many
-SELECT id, competition_id, competition_season_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday FROM matches
+SELECT id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday, url FROM matches
 WHERE home_team_id = $1 or away_team_id = $1
 `
 
@@ -162,7 +222,6 @@ func (q *Queries) GetMatchesByClub(ctx context.Context, homeTeamID uuid.UUID) ([
 		if err := rows.Scan(
 			&i.ID,
 			&i.CompetitionID,
-			&i.CompetitionSeasonID,
 			&i.HomeTeamID,
 			&i.AwayTeamID,
 			&i.HomeGoals,
@@ -175,6 +234,7 @@ func (q *Queries) GetMatchesByClub(ctx context.Context, homeTeamID uuid.UUID) ([
 			&i.HomeXg,
 			&i.AwayXg,
 			&i.Weekday,
+			&i.Url,
 		); err != nil {
 			return nil, err
 		}
