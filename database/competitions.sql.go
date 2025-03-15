@@ -88,6 +88,99 @@ func (q *Queries) DeleteCompetitions(ctx context.Context) error {
 	return err
 }
 
+const getAllTimeCompetitionTable = `-- name: GetAllTimeCompetitionTable :many
+SELECT 
+    team_name,
+    SUM(goals_scored) AS goals_scored,
+    SUM(goals_conceded) AS goals_conceded,
+    SUM(goal_difference) AS goal_difference,
+    SUM(games_played) AS games_played,
+    SUM(wins) AS wins,
+    SUM(draws) AS draws,
+    SUM(losses) AS losses,
+    SUM(points) AS points
+FROM(
+SELECT 
+    teams.name AS team_name,
+    SUM(matches.home_goals) AS goals_scored,
+    SUM(matches.away_goals) AS goals_conceded,
+    COUNT(*) AS games_played,
+    SUM(matches.home_goals) - SUM(matches.away_goals) AS goal_difference,
+    SUM(CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END) AS wins,
+    SUM(CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END) AS draws,
+    SUM(CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END) AS losses,
+    SUM((CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END)) AS points
+FROM teams
+INNER JOIN matches ON matches.home_team_id = teams.id
+INNER JOIN competitions ON matches.competition_id = competitions.id
+WHERE competitions.name = $1
+GROUP BY team_name
+UNION ALL
+SELECT 
+    teams.name AS team_name,
+    SUM(matches.away_goals) AS goals_scored,
+    SUM(matches.home_goals) AS goals_conceded,
+    COUNT(*) AS games_played,
+    SUM(matches.away_goals) - SUM(matches.home_goals) AS goal_difference,
+    SUM(CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END) AS wins,
+    SUM(CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END) AS draws,
+    SUM(CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END) AS losses,
+    SUM((CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END)) AS points
+FROM teams
+INNER JOIN matches ON matches.away_team_id = teams.id
+INNER JOIN competitions ON matches.competition_id = competitions.id
+WHERE competitions.name = $1
+GROUP BY team_name
+) s
+GROUP BY team_name
+ORDER BY points DESC, goal_difference DESC, goals_scored DESC, goals_conceded DESC, wins DESC
+`
+
+type GetAllTimeCompetitionTableRow struct {
+	TeamName       string
+	GoalsScored    int64
+	GoalsConceded  int64
+	GoalDifference int64
+	GamesPlayed    int64
+	Wins           int64
+	Draws          int64
+	Losses         int64
+	Points         int64
+}
+
+func (q *Queries) GetAllTimeCompetitionTable(ctx context.Context, name string) ([]GetAllTimeCompetitionTableRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllTimeCompetitionTable, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllTimeCompetitionTableRow
+	for rows.Next() {
+		var i GetAllTimeCompetitionTableRow
+		if err := rows.Scan(
+			&i.TeamName,
+			&i.GoalsScored,
+			&i.GoalsConceded,
+			&i.GoalDifference,
+			&i.GamesPlayed,
+			&i.Wins,
+			&i.Draws,
+			&i.Losses,
+			&i.Points,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCompetitionIdFromNameAndSeason = `-- name: GetCompetitionIdFromNameAndSeason :one
 SELECT id
 FROM competitions
@@ -209,6 +302,39 @@ func (q *Queries) GetCompetitionTable(ctx context.Context, arg GetCompetitionTab
 			&i.Losses,
 			&i.Points,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUniqueCompetitionSeasons = `-- name: GetUniqueCompetitionSeasons :many
+SELECT name, season
+FROM competitions
+`
+
+type GetUniqueCompetitionSeasonsRow struct {
+	Name   string
+	Season string
+}
+
+func (q *Queries) GetUniqueCompetitionSeasons(ctx context.Context) ([]GetUniqueCompetitionSeasonsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUniqueCompetitionSeasons)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUniqueCompetitionSeasonsRow
+	for rows.Next() {
+		var i GetUniqueCompetitionSeasonsRow
+		if err := rows.Scan(&i.Name, &i.Season); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

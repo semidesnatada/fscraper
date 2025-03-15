@@ -22,15 +22,37 @@ func main() {
 	// season := "1996-1997"
 	// analysis.GetGamesTeamSeason(&s, teamName, season)
 
-	seasonName := "Premier-League"
-	seasonYear := "2015-2016"
+	// TestLeagueTableQuery(&s)
+	// err := analysis.PrintAllLeagueTables(&s)
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// 	os.Exit(1)
+	// }
 
-	err := analysis.PrintLeagueTable(&s, seasonName, seasonYear)
+	err := analysis.GetAndPrintAllTimeLeagueTable(&s, "La-Liga")
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
+
+	// err := analysis.PrintAllLeagueTables(&s)
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// 	os.Exit(1)
+	// }
+
 	analysis.PrintScriptEnd()
 	os.Exit(0)
+}
+
+func TestLeagueTableQuery(s *config.State) {
+	seasonName := "Premier-League"
+	seasonYear := "2015-2016"
+
+	err := analysis.GetAndPrintLeagueTable(s, seasonName, seasonYear)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 }

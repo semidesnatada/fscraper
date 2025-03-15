@@ -12,7 +12,51 @@ import (
 	"github.com/semidesnatada/fscraper/database"
 )
 
-func PrintLeagueTable(s *config.State, seasonName, seasonYear string) error {
+func PrintAllLeagueTables(s *config.State) error {
+
+	seasons, err := s.DB.GetUniqueCompetitionSeasons(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, season := range seasons {
+
+		indErr := GetAndPrintLeagueTable(s, season.Name, season.Season)
+		if indErr != nil {
+			return indErr
+		}
+	}
+	return nil
+}
+
+func GetAndPrintAllTimeLeagueTable(s *config.State, seasonName string) error {
+	rows, err := s.DB.GetAllTimeCompetitionTable(context.Background(),seasonName)
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+	fmt.Println("===========================================================================================")
+	fmt.Printf("All Time %s\n",seasonName)
+	fmt.Println("===========================================================================================")
+	fmt.Println("  Team  			P	W	D	L	GF	GA	GD	PTS")
+	for place, row := range rows {
+		var strPlace string
+		if place < 9 {
+			strPlace = strconv.Itoa(place + 1) + " " 
+		} else {
+			strPlace = strconv.Itoa(place + 1)
+		}
+		teamName := row.TeamName + strings.Repeat(" ", 20 - len(row.TeamName))
+
+		fmt.Printf("%s %s       	%d	%d	%d	%d	%d	%d	%d	%d\n",
+			strPlace, teamName, row.GamesPlayed, row.Wins, row.Draws, row.Losses, row.GoalsScored, row.GoalsConceded, row.GoalDifference, row.Points)
+	}
+	fmt.Println("===========================================================================================")
+	fmt.Println()
+	return nil
+}
+
+func GetAndPrintLeagueTable(s *config.State, seasonName, seasonYear string) error {
 	rows, err := s.DB.GetCompetitionTable(
 		context.Background(),
 		database.GetCompetitionTableParams{
