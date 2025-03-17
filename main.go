@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/semidesnatada/fscraper/analysis"
-	"github.com/semidesnatada/fscraper/client"
 	"github.com/semidesnatada/fscraper/config"
 
 	_ "github.com/lib/pq"
@@ -14,19 +13,26 @@ import (
 func main() {
 	
 	const DB_URL = "postgres://seanlowery:@localhost:5432/fscraped?sslmode=disable"
-	// s := config.CreateState(DB_URL)
+	s := config.CreateState(DB_URL)
 
 	// s.DeleteDatabases()	
 	// client.ScrapeLeagues(&s)
 
-	tester := client.CompetitionSeasonSummary{
-		CompetitionName: "Championship",
-		CompetitionSeason: "2016-2017",
-		CompetitionOnlineID: "10",
-		Url: "https://fbref.com/en/comps/10/2016-2017/schedule/2016-2017-Championship-Scores-and-Fixtures",
-	}
+	// tester := client.CompetitionSeasonSummary{
+	// 	CompetitionName: "Championship",
+	// 	CompetitionSeason: "2016-2017",
+	// 	CompetitionOnlineID: "10",
+	// 	Url: "https://fbref.com/en/comps/10/2016-2017/schedule/2016-2017-Championship-Scores-and-Fixtures",
+	// }
 
-	client.ScrapeLeagueFromUrl(&tester)
+	// tester2 := client.CompetitionSeasonSummary{
+	// 	CompetitionName: "Ligue-1",
+	// 	CompetitionSeason: "2019-2020",
+	// 	CompetitionOnlineID: "13",
+	// 	Url: "https://fbref.com/en/comps/13/2019-2020/schedule/2019-2020-Ligue-1-Scores-and-Fixtures",
+	// }
+
+	// client.ScrapeLeagueFromUrl(&tester2)
 
 	// teamName := "Newcastle Utd"
 	// season := "1996-1997"
@@ -42,7 +48,7 @@ func main() {
 	// 	os.Exit(1)
 	// }
 
-	// err := analysis.GetAndPrintAllTimeLeagueTable(&s, "La-Liga")
+	// err := analysis.GetAndPrintAllTimeLeagueTable(&s, "Ligue-1")
 	// if err != nil {
 	// 	fmt.Println(err.Error())
 	// 	os.Exit(1)
@@ -54,11 +60,11 @@ func main() {
 	// 	os.Exit(1)
 	// }
 
-	// err := analysis.PrintAllLeagueTables(&s)
-	// if err != nil {
-	// 	fmt.Println(err.Error())
-	// 	os.Exit(1)
-	// }
+	err := analysis.PrintAllLeagueTables(&s)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 
 	analysis.PrintScriptEnd()
 	os.Exit(0)

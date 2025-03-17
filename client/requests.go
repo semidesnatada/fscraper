@@ -19,49 +19,29 @@ const (
 	vOldPremUrl = "9/1991-1992/schedule/1991-1992-Premier-League-Scores-and-Fixtures"
 )
 
+type compMetaRecord struct {
+	Name, OnlineCode string
+	EarliestYear, LatestYear int
+}
+
 func GenerateCompsForSearching() []CompetitionSeasonSummary {
-
-	leagueNames := []string{}
-	leagueNames = append(leagueNames, "Premier-League")
-	leagueNames = append(leagueNames, "La-Liga")
-	leagueNames = append(leagueNames, "Championship")
-	leagueNames = append(leagueNames, "Serie-A")
-	leagueNames = append(leagueNames, "Bundesliga")
-	leagueNames = append(leagueNames, "Ligue-1")
-	// leagueNames = append(leagueNames, "Champions-League")
-	// leagueNames = append(leagueNames, "FA-Cup")
-
-	codes := make(map[string]string)
-	codes["Premier-League"] = "9"
-	codes["La-Liga"] = "12"
-	codes["Championship"] = "10"
-	codes["Serie-A"] = "11"
-	codes["Bundesliga"] = "20"
-	codes["Ligue-1"] = "13"
+	
 	// codes["Champions-League"] = "8"
 	// codes["FA-Cup"] = "514"
 
-	years := []string{"1991-1992","1992-1993","1993-1994","1994-1995","1995-1996","1996-1997","1997-1998",
-					"1998-1999","1999-2000","2000-2001","2001-2002","2002-2003","2003-2004","2004-2005",
-					"2005-2006","2006-2007","2007-2008","2008-2009","2009-2010","2010-2011","2011-2012",
-					"2012-2013","2013-2014","2014-2015","2015-2016","2016-2017","2017-2018","2018-2019",
-					"2019-2020","2020-2021","2021-2022","2022-2023","2023-2024"}
-
-	// years := []string{"2014-2015","2015-2016","2016-2017","2017-2018","2018-2019",
-	// 				"2019-2020","2020-2021","2021-2022","2022-2023","2023-2024"}
-	
 	var output []CompetitionSeasonSummary
+	LeagueParameters := getLeagueParams()
 
-	for _, year := range years {
-		for _, league := range leagueNames {
-			output = append(output,
-				CompetitionSeasonSummary{
-					CompetitionName: league,
-					CompetitionSeason: year,
-					CompetitionOnlineID: codes[league],
-					Url: fmt.Sprintf("%s%s/%s/schedule/%s-%s-Scores-and-Fixtures", baseUrl, codes[league], year, year, league),
-				},
-			)
+	for _, comp := range LeagueParameters {
+		for i := comp.EarliestYear; i < comp.LatestYear; i++ {
+			season := fmt.Sprintf("%d-%d",i,i+1)
+			x := CompetitionSeasonSummary{
+				CompetitionName: comp.Name,
+				CompetitionSeason: season,
+				CompetitionOnlineID: comp.OnlineCode,
+				Url: fmt.Sprintf("%s%s/%s/schedule/%s-%s-Scores-and-Fixtures", baseUrl, comp.OnlineCode, season, season, comp.Name),
+			}
+			output = append(output, x)
 		}
 	}
 
@@ -79,14 +59,20 @@ func ScrapeLeagueFromUrl(comp *CompetitionSeasonSummary) (error) {
 	defer res.Body.Close()
 	matches := ParseLeagueResults(*res, *comp)
 	comp.Data = matches
-	PrintMatches(matches, 5)
+	// PrintMatches(matches, 5)
 	return nil
 }
 
 func ScrapeLeagues(s *config.State) error {
 	comps := GenerateCompsForSearching()
 
-	// urls := []string{"https://fbref.com/en/comps/12/2015-2016/schedule/2015-2016-La-Liga-Scores-and-Fixtures"}
+	// comps := [1]CompetitionSeasonSummary{}
+	// comps[0] = CompetitionSeasonSummary{
+	// 	CompetitionName: "Ligue-1",
+	// 	CompetitionSeason: "2019-2020",
+	// 	CompetitionOnlineID: "13",
+	// 	Url:"https://fbref.com/en/comps/13/2019-2020/schedule/2019-2020-Ligue-1-Scores-and-Fixtures",
+	// }
 
 	resultsChannel := make(chan CompetitionSeasonSummary)
 
@@ -148,3 +134,42 @@ func GoScrape(comp CompetitionSeasonSummary, channel chan CompetitionSeasonSumma
 	fmt.Println("===================================================")
 	channel <- comp
 }
+
+func getLeagueParams() []compMetaRecord {
+	return []compMetaRecord {
+	{
+		Name: "Premier-League",
+		OnlineCode: "9",
+		EarliestYear: 1991,
+		LatestYear: 2025,
+	},
+	{
+		Name: "La-Liga",
+		OnlineCode: "12",
+		EarliestYear: 1991,
+		LatestYear: 2025,
+	},
+	{
+		Name: "Bundesliga",
+		OnlineCode: "20",
+		EarliestYear: 1991,
+		LatestYear: 2025,
+	},
+	{
+		Name: "Ligue-1",
+		OnlineCode: "13",
+		EarliestYear: 1995,
+		LatestYear: 2025,
+	},
+	{
+		Name: "Serie-A",
+		OnlineCode: "11",
+		EarliestYear: 1991,
+		LatestYear: 2025,
+	},
+	{
+		Name: "Championship",
+		OnlineCode: "10",
+		EarliestYear: 2014,
+		LatestYear: 2025,
+}}}

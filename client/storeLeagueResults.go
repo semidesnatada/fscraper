@@ -33,10 +33,20 @@ func StoreMatchSummaries(s *config.State, matches CompetitionSeasonSummary) erro
 
 		err := processMatch(s, match, &matchParams)
 		if err != nil {
-			return err
+			if err.Error() =="score not available" {
+				// fmt.Println("no match took place")
+				continue
+				} else {
+				// fmt.Println("didn't compare right")
+				return err
+			}
 		}
-
-		// fmt.Println(matchParams)
+		// fmt.Println("home goals")
+		// fmt.Println(matchParams.HomeGoals)
+		// fmt.Println("away goals")
+		// fmt.Println(matchParams.AwayGoals)
+		// fmt.Println("ko")
+		// fmt.Println(matchParams.KickOffTime.Time.Hour(), matchParams.KickOffTime.Time.Minute())
 
 		_, dbErr := s.DB.CreateMatch(
 			context.Background(),
@@ -53,8 +63,15 @@ func StoreMatchSummaries(s *config.State, matches CompetitionSeasonSummary) erro
 	return nil
 }
 
-func processMatch(s *config.State, match MatchSummary, temp *database.CreateMatchParams) ( error) {
-
+func processMatch(s *config.State, match MatchSummary, temp *database.CreateMatchParams) (error) {
+	goals, gErr, ok := handleScore(match) 
+	if gErr != nil {
+		return gErr
+	}
+	if !ok {
+		return errors.New("score not available")
+	}
+	// fmt.Println("success: score")
 	homeID, homeErr :=  handleTeam(s, match, true)
 	if homeErr != nil {
 		return homeErr
@@ -70,11 +87,6 @@ func processMatch(s *config.State, match MatchSummary, temp *database.CreateMatc
 		return dateErr
 	}
 	// fmt.Println("success: date")
-	goals, gErr := handleScore(match) 
-	if gErr != nil {
-		return gErr
-	}
-	// fmt.Println("success: score")
 	kickoff, koErr := handleKickoff(match)
 	if koErr != nil {
 		return koErr
@@ -180,6 +192,10 @@ func handleAttendance(match MatchSummary) (sql.NullInt32, error) {
 		return sql.NullInt32{Valid: false}, nil
 	}
 
+	if len(attendString) < 1 {
+		return sql.NullInt32{Valid: false}, nil
+	}
+
 	attendString = strings.ReplaceAll(attendString, ",", "")
 
 	attendInt, err := strconv.ParseInt(attendString, 10, 32)
@@ -211,6 +227,10 @@ func handleXG(match MatchSummary, homeOrAway bool) (sql.NullFloat64, error) {
 		return sql.NullFloat64{Valid: false}, nil
 	}
 
+	if len(xgString) < 1 {
+		return sql.NullFloat64{Valid: false}, nil
+	}
+
 	float, err := strconv.ParseFloat(xgString, 64)
 	if err != nil {
 		return sql.NullFloat64{}, err
@@ -225,25 +245,31 @@ func handleXG(match MatchSummary, homeOrAway bool) (sql.NullFloat64, error) {
 
 }
 
-func handleScore(match MatchSummary) ([2]int32, error) {
+func handleScore(match MatchSummary) ([2]int32, error, bool) {
 
 	scoreString, ok := match.data["score"]
 
 	if !ok {
-		return [2]int32{}, errors.New("error accessing score from record")
+		return [2]int32{}, errors.New("error accessing score from record"), false
 	}
+	if len(scoreString) < 1 {
+		// fmt.Println("score not found")
+		return [2]int32{}, nil, false
+	}
+
+	scoreString = strings.ReplaceAll(scoreString, "\u00a0", "")
 
 	goals := strings.Split(scoreString, "–")
 
 	homeGoals, hErr := strconv.Atoi(goals[0])
 	if hErr != nil {
-		return [2]int32{}, hErr
+		return [2]int32{}, hErr, false
 	}
 	awayGoals, aErr := strconv.Atoi(goals[1])
 	if aErr != nil {
-		return [2]int32{}, aErr
+		return [2]int32{}, aErr, false
 	}
-	return [2]int32{int32(homeGoals), int32(awayGoals)}, nil
+	return [2]int32{int32(homeGoals), int32(awayGoals)}, nil, true
 }
 
 func handleDate(match MatchSummary) (time.Time, error) {
@@ -263,8 +289,10 @@ func handleDate(match MatchSummary) (time.Time, error) {
 
 func handleKickoff(match MatchSummary) (sql.NullTime, error) {
 	var kickoff sql.NullTime
-	if ko, ok := match.data["start_time"]; ok {
-		kickoffTime, err := time.Parse(time.TimeOnly, ko)
+	if ko, ok := match.data["start_time"]; ok && len(ko)>0 {
+		ko = strings.ReplaceAll(ko, " ", "")
+		// kickoffTime, err := time.Parse(time.TimeOnly, ko)
+		kickoffTime, err := time.Parse("15:04", ko)
 		if err != nil {
 			return sql.NullTime{Valid: false}, err
 		}
@@ -325,7 +353,7 @@ func handleComp(s *config.State, matches CompetitionSeasonSummary) (uuid.UUID, e
 
 func handleReferee(s *config.State, match MatchSummary) (uuid.NullUUID, error) {
 	var referee uuid.NullUUID
-	if ref, ok := match.data["referee"]; ok {
+	if ref, ok := match.data["referee"]; ok && len(ref) > 0 {
 
 		exists, err := s.DB.CheckIfRefereeExistsByName(context.Background(), ref)
 		if err != nil {
@@ -363,7 +391,7 @@ func handleReferee(s *config.State, match MatchSummary) (uuid.NullUUID, error) {
 
 func handleVenue(s *config.State, match MatchSummary) (uuid.NullUUID, error) {
 	var venue uuid.NullUUID
-	if ven, ok := match.data["venue"]; ok {
+	if ven, ok := match.data["venue"]; ok && len(ven) > 0 {
 
 		exists, err := s.DB.CheckIfVenueExistsByName(context.Background(), ven)
 		if err != nil {
