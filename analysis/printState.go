@@ -29,6 +29,34 @@ func PrintAllLeagueTables(s *config.State) error {
 	return nil
 }
 
+func GetAndPrintClubCompetitionResultsTable(s *config.State, teamName string) error {
+	rows, err := s.DB.GetAllClubCompetitionResults(context.Background(), teamName)
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+	fmt.Println("============================================================================================================")
+	fmt.Printf("%s record in all competitions\n",teamName)
+	fmt.Println("============================================================================================================")
+	fmt.Println("  Competition  					P	W	D	L	GF	GA	GD	PTS")
+	for comp, row := range rows {
+		var strPlace string
+		if comp < 9 {
+			strPlace = strconv.Itoa(comp + 1) + " " 
+		} else {
+			strPlace = strconv.Itoa(comp + 1)
+		}
+		compName := fmt.Sprintf("%s %s%s", row.CompetitionName, row.CompetitionSeason, strings.Repeat(" ", 30 - len(row.CompetitionName)- len(row.CompetitionSeason)))
+
+		fmt.Printf("%s %s       	%d	%d	%d	%d	%d	%d	%d	%d\n",
+			strPlace, compName, row.GamesPlayed, row.Wins, row.Draws, row.Losses, row.GoalsScored, row.GoalsConceded, row.GoalDifference, row.Points)
+	}
+	fmt.Println("============================================================================================================")
+	fmt.Println()
+	return nil
+}
+
+
 func GetAndPrintAllTimeLeagueTable(s *config.State, seasonName string) error {
 	rows, err := s.DB.GetAllTimeCompetitionTable(context.Background(),seasonName)
 	if err != nil {
@@ -97,11 +125,12 @@ func PrintScriptEnd() {
 	fmt.Println("===========================================================================================")
 }
 
-func GetGamesTeamSeason(s *config.State, teamName, season string) {
+func GetGamesTeamSeason(s *config.State, teamName, competition, season string) {
 	games, err := s.DB.GetGamesByTeamAndSeason(
 		context.Background(),
 		database.GetGamesByTeamAndSeasonParams{
 			Name: teamName,
+			Name_2: competition,
 			Season: season,
 			
 		},

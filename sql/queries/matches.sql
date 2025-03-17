@@ -40,7 +40,7 @@ INNER JOIN teams as HT on HT.id = M.home_team_id
 INNER JOIN teams as AT on AT.id = M.away_team_id
 INNER JOIN competitions on competitions.id = M.competition_id
 INNER JOIN venues on M.venue_id = venues.id
-WHERE (HT.name = $1 OR AT.name = $1) AND competitions.season = $2;
+WHERE (HT.name = $1 OR AT.name = $1) AND competitions.name = $2 AND competitions.season = $3;
 
 -- name: DeleteMatches :exec
 DELETE FROM matches;

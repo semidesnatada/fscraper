@@ -25,6 +25,7 @@ func StoreMatchSummaries(s *config.State, matches CompetitionSeasonSummary) erro
 	}
 
 	for _, match := range matches.Data {
+		fmt.Println(match)
 
 		matchParams := database.CreateMatchParams{
 			CompetitionID: compID,
@@ -254,6 +255,7 @@ func handleDate(match MatchSummary) (time.Time, error) {
 
 	date, err := time.Parse(time.DateOnly, dateString)
 	if err != nil {
+		fmt.Println(match.data["home_team"], match.data["away_team"], match.data["score"])
 		return time.Time{}, err
 	}
 	return date, nil

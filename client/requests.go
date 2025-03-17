@@ -1,12 +1,14 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/semidesnatada/fscraper/config"
+	"github.com/semidesnatada/fscraper/database"
 )
 
 const (
@@ -22,10 +24,22 @@ func GenerateCompsForSearching() []CompetitionSeasonSummary {
 	leagueNames := []string{}
 	leagueNames = append(leagueNames, "Premier-League")
 	leagueNames = append(leagueNames, "La-Liga")
+	leagueNames = append(leagueNames, "Championship")
+	leagueNames = append(leagueNames, "Serie-A")
+	leagueNames = append(leagueNames, "Bundesliga")
+	leagueNames = append(leagueNames, "Ligue-1")
+	// leagueNames = append(leagueNames, "Champions-League")
+	// leagueNames = append(leagueNames, "FA-Cup")
 
 	codes := make(map[string]string)
 	codes["Premier-League"] = "9"
 	codes["La-Liga"] = "12"
+	codes["Championship"] = "10"
+	codes["Serie-A"] = "11"
+	codes["Bundesliga"] = "20"
+	codes["Ligue-1"] = "13"
+	// codes["Champions-League"] = "8"
+	// codes["FA-Cup"] = "514"
 
 	years := []string{"1991-1992","1992-1993","1993-1994","1994-1995","1995-1996","1996-1997","1997-1998",
 					"1998-1999","1999-2000","2000-2001","2001-2002","2002-2003","2003-2004","2004-2005",
@@ -68,7 +82,7 @@ func ScrapeLeagueFromUrl(comp *CompetitionSeasonSummary) (error) {
 	return nil
 }
 
-func ScrapeLeagues(s *config.State) {
+func ScrapeLeagues(s *config.State) error {
 	comps := GenerateCompsForSearching()
 
 	// urls := []string{"https://fbref.com/en/comps/12/2015-2016/schedule/2015-2016-La-Liga-Scores-and-Fixtures"}
@@ -78,6 +92,27 @@ func ScrapeLeagues(s *config.State) {
 	go func(channel chan CompetitionSeasonSummary) {
 		ticker := time.NewTicker(time.Second * 6)
 		for _, comp := range comps {
+			//check if comp already exists in db
+
+			alreadyExists, checkErr := s.DB.CheckIfCompetitionExistsByNameAndSeason(
+				context.Background(),
+				database.CheckIfCompetitionExistsByNameAndSeasonParams{
+					Name: comp.CompetitionName,
+					Season: comp.CompetitionSeason,
+				},
+			)
+			if checkErr != nil {
+				fmt.Println("error in checking whether league exists in db in client.requests")
+				os.Exit(1)
+			}
+
+			if alreadyExists {
+				fmt.Println("===================================================")
+				fmt.Printf("%s, season: %s already exists in database. moving on to next scrape.\n", comp.CompetitionName, comp.CompetitionSeason)
+				fmt.Println("===================================================")
+				continue
+			}
+			//if doesn't exist in db, then scrape it.
 			go GoScrape(comp, channel)
 			<- ticker.C
 		}
@@ -95,6 +130,7 @@ func ScrapeLeagues(s *config.State) {
 		fmt.Printf("Successfully concluded storing: %s, season: %s\n", matches.CompetitionName, matches.CompetitionSeason)
 		fmt.Println("===================================================")
 	}
+	return nil
 }
 
 func GoScrape(comp CompetitionSeasonSummary, channel chan CompetitionSeasonSummary) {
