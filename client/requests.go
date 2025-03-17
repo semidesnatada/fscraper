@@ -58,6 +58,7 @@ func GenerateCompsForSearching() []CompetitionSeasonSummary {
 				CompetitionSeasonSummary{
 					CompetitionName: league,
 					CompetitionSeason: year,
+					CompetitionOnlineID: codes[league],
 					Url: fmt.Sprintf("%s%s/%s/schedule/%s-%s-Scores-and-Fixtures", baseUrl, codes[league], year, year, league),
 				},
 			)
@@ -78,7 +79,7 @@ func ScrapeLeagueFromUrl(comp *CompetitionSeasonSummary) (error) {
 	defer res.Body.Close()
 	matches := ParseLeagueResults(*res, *comp)
 	comp.Data = matches
-	// PrintMatches(parsedResult.Data, 5)
+	PrintMatches(matches, 5)
 	return nil
 }
 

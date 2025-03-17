@@ -14,10 +14,19 @@ import (
 func main() {
 	
 	const DB_URL = "postgres://seanlowery:@localhost:5432/fscraped?sslmode=disable"
-	s := config.CreateState(DB_URL)
+	// s := config.CreateState(DB_URL)
 
 	// s.DeleteDatabases()	
-	client.ScrapeLeagues(&s)
+	// client.ScrapeLeagues(&s)
+
+	tester := client.CompetitionSeasonSummary{
+		CompetitionName: "Championship",
+		CompetitionSeason: "2016-2017",
+		CompetitionOnlineID: "10",
+		Url: "https://fbref.com/en/comps/10/2016-2017/schedule/2016-2017-Championship-Scores-and-Fixtures",
+	}
+
+	client.ScrapeLeagueFromUrl(&tester)
 
 	// teamName := "Newcastle Utd"
 	// season := "1996-1997"
@@ -39,7 +48,7 @@ func main() {
 	// 	os.Exit(1)
 	// }
 
-	// err := analysis.GetAndPrintClubCompetitionResultsTable(&s, "Newcastle Utd")
+	// err := analysis.GetAndPrintClubCompetitionResultsTable(&s, "Norwich City")
 	// if err != nil {
 	// 	fmt.Println(err.Error())
 	// 	os.Exit(1)

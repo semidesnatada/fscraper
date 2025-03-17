@@ -16,16 +16,21 @@ func ParseLeagueResults(res http.Response, compData CompetitionSeasonSummary) []
 	if err != nil {
 		log.Fatal("Failed to parse the HTML document", err)
 	}
+	
+	goqueryString := fmt.Sprintf("#sched_%s_%s_1 tbody tr",
+		compData.CompetitionSeason,
+		compData.CompetitionOnlineID,
+	)
 
-	rows := doc.Find("tr")
+	rows := doc.Find(goqueryString)
 
 	var matchesData []MatchSummary
 
-	for i, row := range rows.Nodes {
+	for _, row := range rows.Nodes {
 
-		if i == 0 {
-			continue
-		}
+		// if i == 0 {
+		// 	continue
+		// }
 
 		// ignore row if it has the specific class "spacer partial_table result_all"
 		// do this with brute force / ignore all rows with a class name
@@ -150,5 +155,6 @@ type CompetitionSeasonSummary struct {
 	Data []MatchSummary
 	CompetitionName string
 	CompetitionSeason string
+	CompetitionOnlineID string
 	Url string
 }
