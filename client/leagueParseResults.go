@@ -9,7 +9,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func ParseLeagueResults(res http.Response, compData CompetitionSeasonSummary) []MatchSummary {
+func parseLeagueResults(res http.Response, compData CompetitionSeasonSummary) []MatchSummary {
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 		
@@ -25,14 +25,16 @@ func ParseLeagueResults(res http.Response, compData CompetitionSeasonSummary) []
 	var matchesData []MatchSummary
 
 	doc.Find(goqueryString).Each(func(i int, row *goquery.Selection) {
-		matchMap := MatchSummary{data: make(map[string]string)}
+		matchMap := MatchSummary{data: make(map[string]string), knockout: false}
 		row.Find("td").Each(func(i int, cell *goquery.Selection) {
 			statType, ok := cell.Attr("data-stat")
 			if ok {
 				processCell(statType, cell, &matchMap)
 			}
 		})
-		matchesData = append(matchesData, matchMap)
+		if (matchMap.data["home_team"] != "" || matchMap.data["away_team"] != "" || matchMap.data["score"] != "") &&  matchMap.data["score"] != "Score"  {
+			matchesData = append(matchesData, matchMap)
+		}
 	},
 	)
 	return matchesData
@@ -42,10 +44,10 @@ func processCell(statType string, cell *goquery.Selection, summary *MatchSummary
 
 	switch statType {
 	case "home_team", "away_team", "date":
-		summary.data[statType] = cell.Text()
 		link, ok := cell.Find("a").Attr("href")
 		if ok {
 			summary.data[fmt.Sprintf("%s-url",statType)] = link
+			summary.data[statType] = cell.Find("a").Text()
 		}
 	case "score":
 		summary.data[statType] = cell.Text()
@@ -53,6 +55,8 @@ func processCell(statType string, cell *goquery.Selection, summary *MatchSummary
 		if ok {
 			summary.data["match-report"] = link
 		}
+	case "round":
+		summary.data[statType] = cell.Text()
 	case "notes", "match_report":
 		return
 	default:
@@ -60,16 +64,16 @@ func processCell(statType string, cell *goquery.Selection, summary *MatchSummary
 	}}
 
 
-func PrintMatches(matches []MatchSummary, limit int) {
+func PrintLeagueMatches(matches []MatchSummary, limit int) {
 	for i, match := range matches {
-		PrintMatch(match, true)
+		PrintLeagueMatch(match, true)
 		if i >= limit {
 			return
 		}
 	}
 }
 
-func PrintMatch(match MatchSummary, extended bool) {
+func PrintLeagueMatch(match MatchSummary, extended bool) {
 
 	fmt.Println("===========================================================================================")
 	fmt.Printf("%s %s %s\n", match.data["home_team"], match.data["score"], match.data["away_team"])
@@ -78,7 +82,6 @@ func PrintMatch(match MatchSummary, extended bool) {
 	fmt.Printf("Venue: %s, Attendance: %s\n", match.data["venue"], match.data["attendance"])
 	fmt.Println("===========================================================================================")
 
-
 	if extended {
 		for key, val := range match.data {
 			key = strings.Repeat(" ", 20-len(key)) + key 
@@ -86,16 +89,4 @@ func PrintMatch(match MatchSummary, extended bool) {
 		}
 	}
 	fmt.Println()
-}
-
-type MatchSummary struct {
-	data map[string]string
-}
-
-type CompetitionSeasonSummary struct {
-	Data []MatchSummary
-	CompetitionName string
-	CompetitionSeason string
-	CompetitionOnlineID string
-	Url string
 }

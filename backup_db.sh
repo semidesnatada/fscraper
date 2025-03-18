@@ -16,5 +16,5 @@ timestamp=$(date +'%H%M')
 # pg_dump -U "$PGUSER" -d "$PGDATABASE" > "$BACKUP_DIR/$PGDATABASE"_"$datestamp"_"$timestamp".sql
 pg_dump -U "$PGUSER" -d "$PGDATABASE" -F tar -f "$BACKUP_DIR/$PGDATABASE"_"$datestamp"_"$timestamp".tar
 
-echo "\nBackup successfully saved to : "$BACKUP_DIR/$PGDATABASE"_"$datestamp"_"$timestamp".tar \n"
+echo "Backup successfully saved to : "$BACKUP_DIR/$PGDATABASE"_"$datestamp"_"$timestamp".tar"
 echo "To restore, add your desired restore filename to: ./restore_db.sh, and run it from command line."

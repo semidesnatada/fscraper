@@ -44,33 +44,33 @@ SELECT
 FROM(
 SELECT 
     teams.name AS team_name,
-    SUM(matches.home_goals) AS goals_scored,
-    SUM(matches.away_goals) AS goals_conceded,
+    SUM(league_matches.home_goals) AS goals_scored,
+    SUM(league_matches.away_goals) AS goals_conceded,
     COUNT(*) AS games_played,
-    SUM(matches.home_goals) - SUM(matches.away_goals) AS goal_difference,
+    SUM(league_matches.home_goals) - SUM(league_matches.away_goals) AS goal_difference,
     SUM(CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END) AS wins,
     SUM(CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END) AS draws,
     SUM(CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END) AS losses,
     SUM((CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END)) AS points
 FROM teams
-INNER JOIN matches ON matches.home_team_id = teams.id
-INNER JOIN competitions ON matches.competition_id = competitions.id
+INNER JOIN league_matches ON league_matches.home_team_id = teams.id
+INNER JOIN competitions ON league_matches.competition_id = competitions.id
 WHERE competitions.name = $1 AND competitions.season = $2
 GROUP BY team_name
 UNION ALL
 SELECT 
     teams.name AS team_name,
-    SUM(matches.away_goals) AS goals_scored,
-    SUM(matches.home_goals) AS goals_conceded,
+    SUM(league_matches.away_goals) AS goals_scored,
+    SUM(league_matches.home_goals) AS goals_conceded,
     COUNT(*) AS games_played,
-    SUM(matches.away_goals) - SUM(matches.home_goals) AS goal_difference,
+    SUM(league_matches.away_goals) - SUM(league_matches.home_goals) AS goal_difference,
     SUM(CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END) AS wins,
     SUM(CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END) AS draws,
     SUM(CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END) AS losses,
     SUM((CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END)) AS points
 FROM teams
-INNER JOIN matches ON matches.away_team_id = teams.id
-INNER JOIN competitions ON matches.competition_id = competitions.id
+INNER JOIN league_matches ON league_matches.away_team_id = teams.id
+INNER JOIN competitions ON league_matches.competition_id = competitions.id
 WHERE competitions.name = $1 AND competitions.season = $2
 GROUP BY team_name
 ) s
@@ -95,33 +95,33 @@ SELECT
 FROM(
 SELECT 
     teams.name AS team_name,
-    SUM(matches.home_goals) AS goals_scored,
-    SUM(matches.away_goals) AS goals_conceded,
+    SUM(league_matches.home_goals) AS goals_scored,
+    SUM(league_matches.away_goals) AS goals_conceded,
     COUNT(*) AS games_played,
-    SUM(matches.home_goals) - SUM(matches.away_goals) AS goal_difference,
+    SUM(league_matches.home_goals) - SUM(league_matches.away_goals) AS goal_difference,
     SUM(CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END) AS wins,
     SUM(CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END) AS draws,
     SUM(CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END) AS losses,
     SUM((CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END)) AS points
 FROM teams
-INNER JOIN matches ON matches.home_team_id = teams.id
-INNER JOIN competitions ON matches.competition_id = competitions.id
+INNER JOIN league_matches ON league_matches.home_team_id = teams.id
+INNER JOIN competitions ON league_matches.competition_id = competitions.id
 WHERE competitions.name = $1
 GROUP BY team_name
 UNION ALL
 SELECT 
     teams.name AS team_name,
-    SUM(matches.away_goals) AS goals_scored,
-    SUM(matches.home_goals) AS goals_conceded,
+    SUM(league_matches.away_goals) AS goals_scored,
+    SUM(league_matches.home_goals) AS goals_conceded,
     COUNT(*) AS games_played,
-    SUM(matches.away_goals) - SUM(matches.home_goals) AS goal_difference,
+    SUM(league_matches.away_goals) - SUM(league_matches.home_goals) AS goal_difference,
     SUM(CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END) AS wins,
     SUM(CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END) AS draws,
     SUM(CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END) AS losses,
     SUM((CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END)) AS points
 FROM teams
-INNER JOIN matches ON matches.away_team_id = teams.id
-INNER JOIN competitions ON matches.competition_id = competitions.id
+INNER JOIN league_matches ON league_matches.away_team_id = teams.id
+INNER JOIN competitions ON league_matches.competition_id = competitions.id
 WHERE competitions.name = $1
 GROUP BY team_name
 ) s
@@ -147,17 +147,17 @@ SELECT
     competitions.id AS competition_id,
     competitions.name AS competition_name,
     competitions.season AS competition_season,
-    SUM(matches.home_goals) AS goals_scored,
-    SUM(matches.away_goals) AS goals_conceded,
+    SUM(league_matches.home_goals) AS goals_scored,
+    SUM(league_matches.away_goals) AS goals_conceded,
     COUNT(*) AS games_played,
-    SUM(matches.home_goals) - SUM(matches.away_goals) AS goal_difference,
+    SUM(league_matches.home_goals) - SUM(league_matches.away_goals) AS goal_difference,
     SUM(CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END) AS wins,
     SUM(CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END) AS draws,
     SUM(CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END) AS losses,
     SUM((CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END)) AS points
 FROM teams
-INNER JOIN matches ON matches.home_team_id = teams.id
-INNER JOIN competitions ON matches.competition_id = competitions.id
+INNER JOIN league_matches ON league_matches.home_team_id = teams.id
+INNER JOIN competitions ON league_matches.competition_id = competitions.id
 WHERE teams.name = $1
 GROUP BY competitions.id, teams.name, competitions.name, competitions.season
 UNION ALL
@@ -166,17 +166,17 @@ SELECT
     competitions.id AS competition_id,
     competitions.name AS competition_name,
     competitions.season AS competition_season,
-    SUM(matches.away_goals) AS goals_scored,
-    SUM(matches.home_goals) AS goals_conceded,
+    SUM(league_matches.away_goals) AS goals_scored,
+    SUM(league_matches.home_goals) AS goals_conceded,
     COUNT(*) AS games_played,
-    SUM(matches.away_goals) - SUM(matches.home_goals) AS goal_difference,
+    SUM(league_matches.away_goals) - SUM(league_matches.home_goals) AS goal_difference,
     SUM(CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END) AS wins,
     SUM(CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END) AS draws,
     SUM(CASE WHEN home_goals>away_goals THEN 1 ELSE 0 END) AS losses,
     SUM((CASE WHEN home_goals<away_goals THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals=away_goals THEN 1 ELSE 0 END)) AS points
 FROM teams
-INNER JOIN matches ON matches.away_team_id = teams.id
-INNER JOIN competitions ON matches.competition_id = competitions.id
+INNER JOIN league_matches ON league_matches.away_team_id = teams.id
+INNER JOIN competitions ON league_matches.competition_id = competitions.id
 WHERE teams.name = $1
 GROUP BY competitions.id, teams.name, competitions.name, competitions.season
 ) s

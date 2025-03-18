@@ -42,9 +42,13 @@ func (s *State) DeleteDatabases() error {
 	if errorRefs != nil {
 		return errorRefs
 	}
-	errorMatch := s.DB.DeleteMatches(context.Background())
-	if errorMatch != nil {
-		return errorMatch
+	errorLMatch := s.DB.DeleteLeagueMatches(context.Background())
+	if errorLMatch != nil {
+		return errorLMatch
+	}
+	errorKMatch := s.DB.DeleteKnockoutMatches(context.Background())
+	if errorKMatch != nil {
+		return errorKMatch
 	}
 	errorTeam := s.DB.DeleteTeams(context.Background())
 	if errorTeam != nil {

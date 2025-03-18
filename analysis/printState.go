@@ -126,9 +126,9 @@ func PrintScriptEnd() {
 }
 
 func GetGamesTeamSeason(s *config.State, teamName, competition, season string) {
-	games, err := s.DB.GetGamesByTeamAndSeason(
+	games, err := s.DB.GetLeagueGamesByTeamAndSeason(
 		context.Background(),
-		database.GetGamesByTeamAndSeasonParams{
+		database.GetLeagueGamesByTeamAndSeasonParams{
 			Name: teamName,
 			Name_2: competition,
 			Season: season,

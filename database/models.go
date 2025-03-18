@@ -18,7 +18,29 @@ type Competition struct {
 	Url    string
 }
 
-type Match struct {
+type KnockoutMatch struct {
+	ID            uuid.UUID
+	CompetitionID uuid.UUID
+	HomeTeamID    uuid.UUID
+	AwayTeamID    uuid.UUID
+	HomeGoals     int32
+	AwayGoals     int32
+	Date          time.Time
+	KickOffTime   sql.NullTime
+	RefereeID     uuid.NullUUID
+	VenueID       uuid.NullUUID
+	Attendance    sql.NullInt32
+	HomeXg        sql.NullFloat64
+	AwayXg        sql.NullFloat64
+	WentToPens    bool
+	HomePens      sql.NullInt32
+	AwayPens      sql.NullInt32
+	Round         string
+	Weekday       string
+	Url           string
+}
+
+type LeagueMatch struct {
 	ID            uuid.UUID
 	CompetitionID uuid.UUID
 	HomeTeamID    uuid.UUID

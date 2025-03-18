@@ -14,56 +14,41 @@ import (
 	"github.com/semidesnatada/fscraper/database"
 )
 
-func StoreMatchSummaries(s *config.State, matches CompetitionSeasonSummary) error {
-
-
-	// compID := uuid.New()
-
+func storeLeagueMatchSummaries(s *config.State, matches CompetitionSeasonSummary) error {
 	compID, compErr := handleComp(s, matches)
 	if compErr != nil {
 		return compErr
 	}
 
 	for _, match := range matches.Data {
-		// fmt.Println(match)
 
-		matchParams := database.CreateMatchParams{
+		matchParams := database.CreateLeagueMatchParams{
 			CompetitionID: compID,
 		}
 
-		err := processMatch(s, match, &matchParams)
+		err := processLeagueMatchSummary(s, match, &matchParams)
 		if err != nil {
-			if err.Error() =="score not available" {
-				// fmt.Println("no match took place")
+			if err.Error() == "score not available" {
 				continue
 				} else {
-				// fmt.Println("didn't compare right")
 				return err
 			}
 		}
-		// fmt.Println("home goals")
-		// fmt.Println(matchParams.HomeGoals)
-		// fmt.Println("away goals")
-		// fmt.Println(matchParams.AwayGoals)
-		// fmt.Println("ko")
-		// fmt.Println(matchParams.KickOffTime.Time.Hour(), matchParams.KickOffTime.Time.Minute())
 
-		_, dbErr := s.DB.CreateMatch(
+		_, dbErr := s.DB.CreateLeagueMatch(
 			context.Background(),
 			matchParams,
 		)
 
-		// fmt.Println(matchino)
 		if dbErr != nil {
 			fmt.Println(dbErr.Error())
 			return dbErr
 		}
-
 	}
 	return nil
 }
 
-func processMatch(s *config.State, match MatchSummary, temp *database.CreateMatchParams) (error) {
+func processLeagueMatchSummary(s *config.State, match MatchSummary, temp *database.CreateLeagueMatchParams) (error) {
 	goals, gErr, ok := handleScore(match) 
 	if gErr != nil {
 		return gErr

@@ -12,11 +12,30 @@ import (
 
 func main() {
 	
+	// scoreString := "(3) 1–1 (4)	"
+	// if strings.Contains(scoreString, "(") && strings.Contains(scoreString, ")"){
+	// 	scoreString = strings.ReplaceAll(scoreString, "\u00a0", "")
+	// 	goals := strings.Split(scoreString, "–")
+
+
+	// 	fmt.Println(strings.ReplaceAll(strings.ReplaceAll(strings.Fields(goals[0])[0], "(", ""), ")", ""))
+	// 	fmt.Println(strings.Fields(goals[0])[1])
+	// 	fmt.Println(strings.Fields(goals[1])[0])
+	// 	fmt.Println(strings.ReplaceAll(strings.ReplaceAll(strings.Fields(goals[1])[1], "(", ""), ")", ""))
+	// }
+	
 	const DB_URL = "postgres://seanlowery:@localhost:5432/fscraped?sslmode=disable"
 	s := config.CreateState(DB_URL)
 
 	// s.DeleteDatabases()	
 	// client.ScrapeLeagues(&s)
+	// client.ScrapeKnockouts(&s)
+
+	err := analysis.GetAndPrintKnockoutDraw(&s, "Champions-League", "2023-2024", 3)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 
 	// tester := client.CompetitionSeasonSummary{
 	// 	CompetitionName: "Championship",
@@ -26,10 +45,10 @@ func main() {
 	// }
 
 	// tester2 := client.CompetitionSeasonSummary{
-	// 	CompetitionName: "Ligue-1",
-	// 	CompetitionSeason: "2019-2020",
-	// 	CompetitionOnlineID: "13",
-	// 	Url: "https://fbref.com/en/comps/13/2019-2020/schedule/2019-2020-Ligue-1-Scores-and-Fixtures",
+	// 	CompetitionName: "Champions-League",
+	// 	CompetitionSeason: "2023-2024",
+	// 	CompetitionOnlineID: "8",
+	// 	Url: "https://fbref.com/en/comps/8/2023-2024/schedule/2023-2024-Champions-League-Scores-and-Fixtures",
 	// }
 
 	// client.ScrapeLeagueFromUrl(&tester2)
@@ -60,11 +79,11 @@ func main() {
 	// 	os.Exit(1)
 	// }
 
-	err := analysis.PrintAllLeagueTables(&s)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
+	// err := analysis.PrintAllLeagueTables(&s)
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// 	os.Exit(1)
+	// }
 
 	analysis.PrintScriptEnd()
 	os.Exit(0)

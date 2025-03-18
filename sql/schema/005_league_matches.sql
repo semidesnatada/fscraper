@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE TABLE matches (
+CREATE TABLE league_matches (
     id UUID PRIMARY KEY,
     competition_id UUID NOT NULL,
     home_team_id UUID NOT NULL,
@@ -23,4 +23,4 @@ CREATE TABLE matches (
 );
 
 -- +goose Down
-DROP TABLE matches;
+DROP TABLE league_matches;
