@@ -124,6 +124,8 @@ func processLeagueMatchSummary(s *config.State, match MatchSummary, temp *databa
 	temp.AwayXg = awayXG
 	temp.Weekday = weekday
 	temp.Url = match.data["match-report"]
+	temp.HomeTeamOnlineID = match.data["home_team-url"]
+	temp.AwayTeamOnlineID = match.data["away_team-url"]
 
 	return  nil
 }

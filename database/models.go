@@ -19,43 +19,69 @@ type Competition struct {
 }
 
 type KnockoutMatch struct {
-	ID            uuid.UUID
-	CompetitionID uuid.UUID
-	HomeTeamID    uuid.UUID
-	AwayTeamID    uuid.UUID
-	HomeGoals     int32
-	AwayGoals     int32
-	Date          time.Time
-	KickOffTime   sql.NullTime
-	RefereeID     uuid.NullUUID
-	VenueID       uuid.NullUUID
-	Attendance    sql.NullInt32
-	HomeXg        sql.NullFloat64
-	AwayXg        sql.NullFloat64
-	WentToPens    bool
-	HomePens      sql.NullInt32
-	AwayPens      sql.NullInt32
-	Round         string
-	Weekday       string
-	Url           string
+	ID               uuid.UUID
+	CompetitionID    uuid.UUID
+	HomeTeamID       uuid.UUID
+	AwayTeamID       uuid.UUID
+	HomeGoals        int32
+	AwayGoals        int32
+	Date             time.Time
+	KickOffTime      sql.NullTime
+	RefereeID        uuid.NullUUID
+	VenueID          uuid.NullUUID
+	Attendance       sql.NullInt32
+	HomeXg           sql.NullFloat64
+	AwayXg           sql.NullFloat64
+	WentToPens       bool
+	HomePens         sql.NullInt32
+	AwayPens         sql.NullInt32
+	Round            string
+	Weekday          string
+	Url              string
+	HomeTeamOnlineID string
+	AwayTeamOnlineID string
 }
 
 type LeagueMatch struct {
-	ID            uuid.UUID
-	CompetitionID uuid.UUID
-	HomeTeamID    uuid.UUID
-	AwayTeamID    uuid.UUID
-	HomeGoals     int32
-	AwayGoals     int32
-	Date          time.Time
-	KickOffTime   sql.NullTime
-	RefereeID     uuid.NullUUID
-	VenueID       uuid.NullUUID
-	Attendance    sql.NullInt32
-	HomeXg        sql.NullFloat64
-	AwayXg        sql.NullFloat64
-	Weekday       string
-	Url           string
+	ID               uuid.UUID
+	CompetitionID    uuid.UUID
+	HomeTeamID       uuid.UUID
+	AwayTeamID       uuid.UUID
+	HomeGoals        int32
+	AwayGoals        int32
+	Date             time.Time
+	KickOffTime      sql.NullTime
+	RefereeID        uuid.NullUUID
+	VenueID          uuid.NullUUID
+	Attendance       sql.NullInt32
+	HomeXg           sql.NullFloat64
+	AwayXg           sql.NullFloat64
+	Weekday          string
+	Url              string
+	HomeTeamOnlineID string
+	AwayTeamOnlineID string
+}
+
+type Player struct {
+	ID          uuid.UUID
+	Name        string
+	Nationality string
+	Url         string
+}
+
+type PlayerMatch struct {
+	MatchID     uuid.UUID
+	PlayerID    uuid.UUID
+	MatchUrl    string
+	FirstMinute int32
+	LastMinute  int32
+	Goals       int32
+	Penalties   int32
+	YellowCard  int32
+	RedCard     int32
+	OwnGoals    int32
+	IsKnockout  bool
+	AtHome      bool
 }
 
 type Referee struct {

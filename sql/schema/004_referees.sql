@@ -5,4 +5,4 @@ CREATE TABLE referees (
 );
 
 -- +goose Down
-DROP TABLE IF EXISTS referees;
+DROP TABLE referees;

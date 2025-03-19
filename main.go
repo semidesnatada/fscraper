@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/semidesnatada/fscraper/analysis"
+	"github.com/semidesnatada/fscraper/client"
 	"github.com/semidesnatada/fscraper/config"
 
 	_ "github.com/lib/pq"
@@ -27,15 +28,21 @@ func main() {
 	const DB_URL = "postgres://seanlowery:@localhost:5432/fscraped?sslmode=disable"
 	s := config.CreateState(DB_URL)
 
-	// s.DeleteDatabases()	
+	s.DeleteDetailedDatabases()
+	// s.DeleteAllDatabases()
+	// s.DeleteSummaryDatabases()	
+
+	client.DetailedMatchScraper(&s)
+
+
 	// client.ScrapeLeagues(&s)
 	// client.ScrapeKnockouts(&s)
 
-	err := analysis.GetAndPrintKnockoutDraw(&s, "Champions-League", "2023-2024", 3)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
+	// err := analysis.GetAndPrintKnockoutDraw(&s, "Champions-League", "2023-2024", 3)
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// 	os.Exit(1)
+	// }
 
 	// tester := client.CompetitionSeasonSummary{
 	// 	CompetitionName: "Championship",

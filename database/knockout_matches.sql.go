@@ -16,7 +16,7 @@ import (
 const createKnockoutMatch = `-- name: CreateKnockoutMatch :one
 INSERT INTO knockout_matches (id, competition_id, home_team_id, away_team_id,
 home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, 
-home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, url)
+home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, url, home_team_online_id, away_team_online_id)
 VALUES (
     $1,
     $2,
@@ -36,31 +36,35 @@ VALUES (
     $16,
     $17,
     $18,
-    $19
+    $19,
+    $20,
+    $21
 )
-RETURNING id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, url
+RETURNING id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, url, home_team_online_id, away_team_online_id
 `
 
 type CreateKnockoutMatchParams struct {
-	ID            uuid.UUID
-	CompetitionID uuid.UUID
-	HomeTeamID    uuid.UUID
-	AwayTeamID    uuid.UUID
-	HomeGoals     int32
-	AwayGoals     int32
-	Date          time.Time
-	KickOffTime   sql.NullTime
-	RefereeID     uuid.NullUUID
-	VenueID       uuid.NullUUID
-	Attendance    sql.NullInt32
-	HomeXg        sql.NullFloat64
-	AwayXg        sql.NullFloat64
-	WentToPens    bool
-	HomePens      sql.NullInt32
-	AwayPens      sql.NullInt32
-	Round         string
-	Weekday       string
-	Url           string
+	ID               uuid.UUID
+	CompetitionID    uuid.UUID
+	HomeTeamID       uuid.UUID
+	AwayTeamID       uuid.UUID
+	HomeGoals        int32
+	AwayGoals        int32
+	Date             time.Time
+	KickOffTime      sql.NullTime
+	RefereeID        uuid.NullUUID
+	VenueID          uuid.NullUUID
+	Attendance       sql.NullInt32
+	HomeXg           sql.NullFloat64
+	AwayXg           sql.NullFloat64
+	WentToPens       bool
+	HomePens         sql.NullInt32
+	AwayPens         sql.NullInt32
+	Round            string
+	Weekday          string
+	Url              string
+	HomeTeamOnlineID string
+	AwayTeamOnlineID string
 }
 
 func (q *Queries) CreateKnockoutMatch(ctx context.Context, arg CreateKnockoutMatchParams) (KnockoutMatch, error) {
@@ -84,6 +88,8 @@ func (q *Queries) CreateKnockoutMatch(ctx context.Context, arg CreateKnockoutMat
 		arg.Round,
 		arg.Weekday,
 		arg.Url,
+		arg.HomeTeamOnlineID,
+		arg.AwayTeamOnlineID,
 	)
 	var i KnockoutMatch
 	err := row.Scan(
@@ -106,6 +112,8 @@ func (q *Queries) CreateKnockoutMatch(ctx context.Context, arg CreateKnockoutMat
 		&i.Round,
 		&i.Weekday,
 		&i.Url,
+		&i.HomeTeamOnlineID,
+		&i.AwayTeamOnlineID,
 	)
 	return i, err
 }
@@ -120,7 +128,7 @@ func (q *Queries) DeleteKnockoutMatches(ctx context.Context) error {
 }
 
 const getAllMatchesFromComp = `-- name: GetAllMatchesFromComp :many
-SELECT knockout_matches.id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, knockout_matches.url, competitions.id, name, season, competitions.url FROM knockout_matches
+SELECT knockout_matches.id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, knockout_matches.url, home_team_online_id, away_team_online_id, competitions.id, name, season, competitions.url FROM knockout_matches
 INNER JOIN competitions on competitions.id = knockout_matches.competition_id
 WHERE competitions.name = $1 AND competitions.season = $2 AND round = $3
 `
@@ -132,29 +140,31 @@ type GetAllMatchesFromCompParams struct {
 }
 
 type GetAllMatchesFromCompRow struct {
-	ID            uuid.UUID
-	CompetitionID uuid.UUID
-	HomeTeamID    uuid.UUID
-	AwayTeamID    uuid.UUID
-	HomeGoals     int32
-	AwayGoals     int32
-	Date          time.Time
-	KickOffTime   sql.NullTime
-	RefereeID     uuid.NullUUID
-	VenueID       uuid.NullUUID
-	Attendance    sql.NullInt32
-	HomeXg        sql.NullFloat64
-	AwayXg        sql.NullFloat64
-	WentToPens    bool
-	HomePens      sql.NullInt32
-	AwayPens      sql.NullInt32
-	Round         string
-	Weekday       string
-	Url           string
-	ID_2          uuid.UUID
-	Name          string
-	Season        string
-	Url_2         string
+	ID               uuid.UUID
+	CompetitionID    uuid.UUID
+	HomeTeamID       uuid.UUID
+	AwayTeamID       uuid.UUID
+	HomeGoals        int32
+	AwayGoals        int32
+	Date             time.Time
+	KickOffTime      sql.NullTime
+	RefereeID        uuid.NullUUID
+	VenueID          uuid.NullUUID
+	Attendance       sql.NullInt32
+	HomeXg           sql.NullFloat64
+	AwayXg           sql.NullFloat64
+	WentToPens       bool
+	HomePens         sql.NullInt32
+	AwayPens         sql.NullInt32
+	Round            string
+	Weekday          string
+	Url              string
+	HomeTeamOnlineID string
+	AwayTeamOnlineID string
+	ID_2             uuid.UUID
+	Name             string
+	Season           string
+	Url_2            string
 }
 
 func (q *Queries) GetAllMatchesFromComp(ctx context.Context, arg GetAllMatchesFromCompParams) ([]GetAllMatchesFromCompRow, error) {
@@ -186,6 +196,8 @@ func (q *Queries) GetAllMatchesFromComp(ctx context.Context, arg GetAllMatchesFr
 			&i.Round,
 			&i.Weekday,
 			&i.Url,
+			&i.HomeTeamOnlineID,
+			&i.AwayTeamOnlineID,
 			&i.ID_2,
 			&i.Name,
 			&i.Season,
@@ -345,8 +357,83 @@ func (q *Queries) GetKnockoutGamesByTeamAndSeason(ctx context.Context, arg GetKn
 	return items, nil
 }
 
+const getKnockoutMatchIDFromUrl = `-- name: GetKnockoutMatchIDFromUrl :one
+SELECT id
+FROM knockout_matches
+WHERE url = $1
+`
+
+func (q *Queries) GetKnockoutMatchIDFromUrl(ctx context.Context, url string) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, getKnockoutMatchIDFromUrl, url)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getKnockoutMatchUrls = `-- name: GetKnockoutMatchUrls :many
+SELECT url
+FROM knockout_matches
+`
+
+func (q *Queries) GetKnockoutMatchUrls(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getKnockoutMatchUrls)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var url string
+		if err := rows.Scan(&url); err != nil {
+			return nil, err
+		}
+		items = append(items, url)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getKnockoutMatchUrlsAndTeamOnlineIds = `-- name: GetKnockoutMatchUrlsAndTeamOnlineIds :many
+SELECT url, home_team_online_id, away_team_online_id
+FROM knockout_matches
+`
+
+type GetKnockoutMatchUrlsAndTeamOnlineIdsRow struct {
+	Url              string
+	HomeTeamOnlineID string
+	AwayTeamOnlineID string
+}
+
+func (q *Queries) GetKnockoutMatchUrlsAndTeamOnlineIds(ctx context.Context) ([]GetKnockoutMatchUrlsAndTeamOnlineIdsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getKnockoutMatchUrlsAndTeamOnlineIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetKnockoutMatchUrlsAndTeamOnlineIdsRow
+	for rows.Next() {
+		var i GetKnockoutMatchUrlsAndTeamOnlineIdsRow
+		if err := rows.Scan(&i.Url, &i.HomeTeamOnlineID, &i.AwayTeamOnlineID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getKnockoutMatches = `-- name: GetKnockoutMatches :many
-SELECT id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, url FROM knockout_matches
+SELECT id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, url, home_team_online_id, away_team_online_id FROM knockout_matches
 `
 
 func (q *Queries) GetKnockoutMatches(ctx context.Context) ([]KnockoutMatch, error) {
@@ -378,6 +465,8 @@ func (q *Queries) GetKnockoutMatches(ctx context.Context) ([]KnockoutMatch, erro
 			&i.Round,
 			&i.Weekday,
 			&i.Url,
+			&i.HomeTeamOnlineID,
+			&i.AwayTeamOnlineID,
 		); err != nil {
 			return nil, err
 		}
@@ -393,7 +482,7 @@ func (q *Queries) GetKnockoutMatches(ctx context.Context) ([]KnockoutMatch, erro
 }
 
 const getKnockoutMatchesByClub = `-- name: GetKnockoutMatchesByClub :many
-SELECT id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, url FROM knockout_matches
+SELECT id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, url, home_team_online_id, away_team_online_id FROM knockout_matches
 WHERE home_team_id = $1 or away_team_id = $1
 `
 
@@ -426,6 +515,8 @@ func (q *Queries) GetKnockoutMatchesByClub(ctx context.Context, homeTeamID uuid.
 			&i.Round,
 			&i.Weekday,
 			&i.Url,
+			&i.HomeTeamOnlineID,
+			&i.AwayTeamOnlineID,
 		); err != nil {
 			return nil, err
 		}

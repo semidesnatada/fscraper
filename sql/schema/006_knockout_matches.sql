@@ -19,6 +19,8 @@ CREATE TABLE knockout_matches (
     round TEXT NOT NULL,
     weekday TEXT NOT NULL,
     url TEXT NOT NULL UNIQUE,
+    home_team_online_id TEXT NOT NULL,
+    away_team_online_id TEXT NOT NULL,
     FOREIGN KEY (competition_id) REFERENCES competitions (id) ON DELETE CASCADE,
     FOREIGN KEY (home_team_id) REFERENCES teams (id) ON DELETE CASCADE,
     FOREIGN KEY (away_team_id) REFERENCES teams (id) ON DELETE CASCADE,

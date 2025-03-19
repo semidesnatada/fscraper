@@ -1,6 +1,7 @@
 package client
 
 const baseUrl = "https://fbref.com/en/comps/"
+const baseMatchUrl = "https://fbref.com"
 
 type MatchSummary struct {
 	knockout bool

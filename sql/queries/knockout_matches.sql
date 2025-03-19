@@ -8,7 +8,7 @@ WHERE home_team_id = $1 or away_team_id = $1;
 -- name: CreateKnockoutMatch :one
 INSERT INTO knockout_matches (id, competition_id, home_team_id, away_team_id,
 home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, 
-home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, url)
+home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, url, home_team_online_id, away_team_online_id)
 VALUES (
     $1,
     $2,
@@ -28,7 +28,9 @@ VALUES (
     $16,
     $17,
     $18,
-    $19
+    $19,
+    $20,
+    $21
 )
 RETURNING *;
 
@@ -83,6 +85,19 @@ ORDER BY no_of_games;
 SELECT * FROM knockout_matches
 INNER JOIN competitions on competitions.id = knockout_matches.competition_id
 WHERE competitions.name = $1 AND competitions.season = $2 AND round = $3;
+
+-- name: GetKnockoutMatchUrls :many
+SELECT url
+FROM knockout_matches;
+
+-- name: GetKnockoutMatchUrlsAndTeamOnlineIds :many
+SELECT url, home_team_online_id, away_team_online_id
+FROM knockout_matches;
+
+-- name: GetKnockoutMatchIDFromUrl :one
+SELECT id
+FROM knockout_matches
+WHERE url = $1;
 
 -- name: DeleteKnockoutMatches :exec
 DELETE FROM knockout_matches;

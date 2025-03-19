@@ -145,6 +145,8 @@ func processKnockoutMatchSummary(s *config.State, match MatchSummary, temp *data
 	temp.Round = round
 	temp.Weekday = weekday
 	temp.Url = match.data["match-report"]
+	temp.HomeTeamOnlineID = match.data["home_team-url"]
+	temp.AwayTeamOnlineID = match.data["away_team-url"]
 
 	return  nil
 }

@@ -15,7 +15,8 @@ import (
 
 const createLeagueMatch = `-- name: CreateLeagueMatch :one
 INSERT INTO league_matches (id, competition_id, home_team_id, away_team_id,
-home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday, url)
+home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance,
+home_xg, away_xg, weekday, url, home_team_online_id, away_team_online_id)
 VALUES (
     $1,
     $2,
@@ -31,27 +32,31 @@ VALUES (
     $12,
     $13,
     $14,
-    $15
+    $15,
+    $16,
+    $17
 )
-RETURNING id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday, url
+RETURNING id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday, url, home_team_online_id, away_team_online_id
 `
 
 type CreateLeagueMatchParams struct {
-	ID            uuid.UUID
-	CompetitionID uuid.UUID
-	HomeTeamID    uuid.UUID
-	AwayTeamID    uuid.UUID
-	HomeGoals     int32
-	AwayGoals     int32
-	Date          time.Time
-	KickOffTime   sql.NullTime
-	RefereeID     uuid.NullUUID
-	VenueID       uuid.NullUUID
-	Attendance    sql.NullInt32
-	HomeXg        sql.NullFloat64
-	AwayXg        sql.NullFloat64
-	Weekday       string
-	Url           string
+	ID               uuid.UUID
+	CompetitionID    uuid.UUID
+	HomeTeamID       uuid.UUID
+	AwayTeamID       uuid.UUID
+	HomeGoals        int32
+	AwayGoals        int32
+	Date             time.Time
+	KickOffTime      sql.NullTime
+	RefereeID        uuid.NullUUID
+	VenueID          uuid.NullUUID
+	Attendance       sql.NullInt32
+	HomeXg           sql.NullFloat64
+	AwayXg           sql.NullFloat64
+	Weekday          string
+	Url              string
+	HomeTeamOnlineID string
+	AwayTeamOnlineID string
 }
 
 func (q *Queries) CreateLeagueMatch(ctx context.Context, arg CreateLeagueMatchParams) (LeagueMatch, error) {
@@ -71,6 +76,8 @@ func (q *Queries) CreateLeagueMatch(ctx context.Context, arg CreateLeagueMatchPa
 		arg.AwayXg,
 		arg.Weekday,
 		arg.Url,
+		arg.HomeTeamOnlineID,
+		arg.AwayTeamOnlineID,
 	)
 	var i LeagueMatch
 	err := row.Scan(
@@ -89,6 +96,8 @@ func (q *Queries) CreateLeagueMatch(ctx context.Context, arg CreateLeagueMatchPa
 		&i.AwayXg,
 		&i.Weekday,
 		&i.Url,
+		&i.HomeTeamOnlineID,
+		&i.AwayTeamOnlineID,
 	)
 	return i, err
 }
@@ -163,8 +172,83 @@ func (q *Queries) GetLeagueGamesByTeamAndSeason(ctx context.Context, arg GetLeag
 	return items, nil
 }
 
+const getLeagueMatchIDFromUrl = `-- name: GetLeagueMatchIDFromUrl :one
+SELECT id
+FROM league_matches
+WHERE url = $1
+`
+
+func (q *Queries) GetLeagueMatchIDFromUrl(ctx context.Context, url string) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, getLeagueMatchIDFromUrl, url)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getLeagueMatchUrls = `-- name: GetLeagueMatchUrls :many
+SELECT url
+FROM league_matches
+`
+
+func (q *Queries) GetLeagueMatchUrls(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getLeagueMatchUrls)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var url string
+		if err := rows.Scan(&url); err != nil {
+			return nil, err
+		}
+		items = append(items, url)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getLeagueMatchUrlsAndTeamOnlineIds = `-- name: GetLeagueMatchUrlsAndTeamOnlineIds :many
+SELECT url, home_team_online_id, away_team_online_id
+FROM league_matches
+`
+
+type GetLeagueMatchUrlsAndTeamOnlineIdsRow struct {
+	Url              string
+	HomeTeamOnlineID string
+	AwayTeamOnlineID string
+}
+
+func (q *Queries) GetLeagueMatchUrlsAndTeamOnlineIds(ctx context.Context) ([]GetLeagueMatchUrlsAndTeamOnlineIdsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getLeagueMatchUrlsAndTeamOnlineIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetLeagueMatchUrlsAndTeamOnlineIdsRow
+	for rows.Next() {
+		var i GetLeagueMatchUrlsAndTeamOnlineIdsRow
+		if err := rows.Scan(&i.Url, &i.HomeTeamOnlineID, &i.AwayTeamOnlineID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLeagueMatches = `-- name: GetLeagueMatches :many
-SELECT id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday, url FROM league_matches
+SELECT id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday, url, home_team_online_id, away_team_online_id FROM league_matches
 `
 
 func (q *Queries) GetLeagueMatches(ctx context.Context) ([]LeagueMatch, error) {
@@ -192,6 +276,8 @@ func (q *Queries) GetLeagueMatches(ctx context.Context) ([]LeagueMatch, error) {
 			&i.AwayXg,
 			&i.Weekday,
 			&i.Url,
+			&i.HomeTeamOnlineID,
+			&i.AwayTeamOnlineID,
 		); err != nil {
 			return nil, err
 		}
@@ -207,7 +293,7 @@ func (q *Queries) GetLeagueMatches(ctx context.Context) ([]LeagueMatch, error) {
 }
 
 const getLeagueMatchesByClub = `-- name: GetLeagueMatchesByClub :many
-SELECT id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday, url FROM league_matches
+SELECT id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, weekday, url, home_team_online_id, away_team_online_id FROM league_matches
 WHERE home_team_id = $1 or away_team_id = $1
 `
 
@@ -236,6 +322,8 @@ func (q *Queries) GetLeagueMatchesByClub(ctx context.Context, homeTeamID uuid.UU
 			&i.AwayXg,
 			&i.Weekday,
 			&i.Url,
+			&i.HomeTeamOnlineID,
+			&i.AwayTeamOnlineID,
 		); err != nil {
 			return nil, err
 		}

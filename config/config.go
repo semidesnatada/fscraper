@@ -32,7 +32,7 @@ func CreateState(DB_URL string) State {
 	return appState
 }
 
-func (s *State) DeleteDatabases() error {
+func (s *State) DeleteSummaryDatabases() error {
 
 	errorComp := s.DB.DeleteCompetitions(context.Background())
 	if errorComp != nil {
@@ -57,6 +57,32 @@ func (s *State) DeleteDatabases() error {
 	errorVen := s.DB.DeleteVenues(context.Background())
 	if errorVen != nil {
 		return errorVen
+	}
+	return nil
+}
+
+func (s *State) DeleteDetailedDatabases() error {
+
+	errorPm := s.DB.DeletePlayerMatches(context.Background())
+	if errorPm != nil {
+		return errorPm
+	}
+	errorP := s.DB.DeletePlayers(context.Background())
+	if errorP != nil {
+		return errorP
+	}
+
+	return nil
+}
+
+func (s *State) DeleteAllDatabases() error {
+	dErr := s.DeleteDetailedDatabases()
+	if dErr != nil {
+		return dErr
+	}
+	sErr := s.DeleteSummaryDatabases()
+	if sErr != nil {
+		return sErr
 	}
 	return nil
 }
