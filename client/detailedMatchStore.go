@@ -12,7 +12,7 @@ import (
 
 func storeDetailedMatches(s *config.State, container DetailedMatchContainer) {
 
-	container.passAndClean()
+	container = passAndClean(container)
 
 	for _, player := range container.homePlayers {
 		template := getRecordTemplate(s, container.matchUrl, container.HomeTeamOnlineID, container.isknockout, player)
@@ -22,7 +22,6 @@ func storeDetailedMatches(s *config.State, container DetailedMatchContainer) {
 		template := getRecordTemplate(s, container.matchUrl, container.AwayTeamOnlineID, container.isknockout, player)
 		storeTemplate(s, template)
 	}
-
 }
 
 func getRecordTemplate(s *config.State, matchUrl string, teamOnlineID string, isKo bool, player PlayerDetailContainer) database.CreatePlayerMatchParams {
@@ -95,69 +94,63 @@ func getRecordTemplate(s *config.State, matchUrl string, teamOnlineID string, is
 	return recordTemplate
 }
 
-func (d *DetailedMatchContainer) passAndClean() {
+func passAndClean(d DetailedMatchContainer) DetailedMatchContainer {
 
-	var last_starter int
-	var last_starter_last_minute int
-
+	var last_starter_h int
+	var last_starter_last_minute_h int
+	last_starter_h = 0
+	last_starter_last_minute_h = 0
 	//clean minutes data
 	for i, player := range d.homePlayers {
-		fmt.Println(i, player.player_name, player.mins_played)
-		player.home_or_away = true
+		d.homePlayers[i].home_or_away = true
 
 		if player.mins_played == 90 {
-			player.first_minute = 0
-			player.last_minute = 90
-			last_starter = i + 1
-			last_starter_last_minute = 90
-		} else if i == last_starter {
-			player.first_minute = 0
-			player.last_minute = player.mins_played
-			last_starter_last_minute = player.mins_played
+			d.homePlayers[i].first_minute = 0
+			d.homePlayers[i].last_minute = 90
+			last_starter_h = i + 1
+			last_starter_last_minute_h = 90
+		} else if i == last_starter_h {
+			d.homePlayers[i].first_minute = 0
+			d.homePlayers[i].last_minute = player.mins_played
+			last_starter_last_minute_h = player.mins_played
 		} else {
-			player.first_minute = last_starter_last_minute
-			player.last_minute = last_starter_last_minute + player.mins_played
-			if player.last_minute < 90 {
-				last_starter_last_minute = player.last_minute
+			d.homePlayers[i].first_minute = last_starter_last_minute_h
+			d.homePlayers[i].last_minute = last_starter_last_minute_h + player.mins_played
+			if d.homePlayers[i].last_minute < 90 {
+				last_starter_last_minute_h = d.homePlayers[i].last_minute
 			} else {
-				last_starter_last_minute = 90
-				last_starter = i + 1
+				last_starter_last_minute_h = 90
+				last_starter_h = i + 1
 			}
 		}
 	}
+	var last_starter_a int
+	var last_starter_last_minute_a int
+	last_starter_a = 0
+	last_starter_last_minute_a = 0
 	for i, player := range d.awayPlayers {
-		fmt.Println(i, player.player_name, player.mins_played)
-
-		fmt.Println("checking mins played section")
-		fmt.Println(player.first_minute)
-		fmt.Println(player.last_minute)
-		fmt.Println(player.mins_played)
-
-		player.home_or_away = false
-
+		d.awayPlayers[i].home_or_away = false
 		if player.mins_played == 90 {
-			player.first_minute = 0
-			player.last_minute = 90
-			last_starter = i + 1
-			last_starter_last_minute = 90
-		} else if i == last_starter {
-			player.first_minute = 0
-			player.last_minute = player.mins_played
-			last_starter_last_minute = player.mins_played
+			d.awayPlayers[i].first_minute = 0
+			d.awayPlayers[i].last_minute = 90
+			last_starter_a = i + 1
+			last_starter_last_minute_a = 90
+		} else if i == last_starter_a {
+			d.awayPlayers[i].first_minute = 0
+			d.awayPlayers[i].last_minute = player.mins_played
+			last_starter_last_minute_a = player.mins_played
 		} else {
-			player.first_minute = last_starter_last_minute
-			player.last_minute = last_starter_last_minute + player.mins_played
-			if player.last_minute < 90 {
-				last_starter_last_minute = player.last_minute
+			d.awayPlayers[i].first_minute = last_starter_last_minute_a
+			d.awayPlayers[i].last_minute = last_starter_last_minute_a + player.mins_played
+			if d.awayPlayers[i].last_minute < 90 {
+				last_starter_last_minute_a = d.awayPlayers[i].last_minute
 			} else {
-				last_starter_last_minute = 90
-				last_starter = i + 1
+				last_starter_last_minute_a = 90
+				last_starter_a = i + 1
 			}
 		}
 	}
-
-	fmt.Println(d)
-
+	return d
 }
 
 func storeTemplate(s *config.State, template database.CreatePlayerMatchParams) {

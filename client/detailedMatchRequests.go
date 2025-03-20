@@ -102,16 +102,8 @@ func parseKnockoutResponse(res *http.Response, c chan DetailedMatchContainer, ro
 	var awayPlayers []PlayerDetailContainer
 
 	defer res.Body.Close()
-	processDocAndTeam(res, &homePlayers, homeCode)
-	processDocAndTeam(res, &awayPlayers, awayCode)
-
-	fmt.Println()
-	fmt.Println("checking parsing")
-	fmt.Println(homePlayers)
-	fmt.Println(homeCode)
-	fmt.Println(awayPlayers)
-	fmt.Println(awayCode)
-	fmt.Println()
+	processDocAndTeam(res, &homePlayers, &awayPlayers, homeCode, awayCode)
+	// processDocAndTeam(res, &awayPlayers, awayCode)
 
 	processedResult := DetailedMatchContainer{
 		matchUrl: row.Url,

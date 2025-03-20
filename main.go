@@ -13,30 +13,17 @@ import (
 
 func main() {
 	
-	// scoreString := "(3) 1–1 (4)	"
-	// if strings.Contains(scoreString, "(") && strings.Contains(scoreString, ")"){
-	// 	scoreString = strings.ReplaceAll(scoreString, "\u00a0", "")
-	// 	goals := strings.Split(scoreString, "–")
-
-
-	// 	fmt.Println(strings.ReplaceAll(strings.ReplaceAll(strings.Fields(goals[0])[0], "(", ""), ")", ""))
-	// 	fmt.Println(strings.Fields(goals[0])[1])
-	// 	fmt.Println(strings.Fields(goals[1])[0])
-	// 	fmt.Println(strings.ReplaceAll(strings.ReplaceAll(strings.Fields(goals[1])[1], "(", ""), ")", ""))
-	// }
-	
 	const DB_URL = "postgres://seanlowery:@localhost:5432/fscraped?sslmode=disable"
 	s := config.CreateState(DB_URL)
 
-	s.DeleteDetailedDatabases()
+	// s.DeleteDetailedDatabases()
 	// s.DeleteAllDatabases()
 	// s.DeleteSummaryDatabases()	
 
-	client.DetailedMatchScraper(&s)
-
-
 	// client.ScrapeLeagues(&s)
 	// client.ScrapeKnockouts(&s)
+
+	client.DetailedMatchScraper(&s)
 
 	// err := analysis.GetAndPrintKnockoutDraw(&s, "Champions-League", "2023-2024", 3)
 	// if err != nil {

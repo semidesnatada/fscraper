@@ -9,9 +9,9 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func processDocAndTeam(res *http.Response, players *[]PlayerDetailContainer, teamCode string) {
+func processDocAndTeam(res *http.Response, homePlayers *[]PlayerDetailContainer, awayPlayers *[]PlayerDetailContainer, homeCode string, awayCode string) {
 
-	defer res.Body.Close()
+	// defer res.Body.Close()
 	
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
@@ -19,12 +19,13 @@ func processDocAndTeam(res *http.Response, players *[]PlayerDetailContainer, tea
 		os.Exit(1)
 	}
 
-	// searchCode := fmt.Sprintf("#stats_%s_summary tbody tr ", teamCode)
+	homeSearch := fmt.Sprintf("#stats_%s_summary tbody tr ", homeCode)
+	awaySearch := fmt.Sprintf("#stats_%s_summary tbody tr ", awayCode)
 
-	homeSearch := "#stats_bba7d733_summary tbody tr"
-	awaySearch := "#stats_6ca73159_summary tbody tr"
+	// homeSearch := "#stats_bba7d733_summary tbody tr"
+	// awaySearch := "#stats_6ca73159_summary tbody tr"
 
-	doc.Find(searchCode).Each(func(i int, row *goquery.Selection) {
+	doc.Find(homeSearch).Each(func(i int, row *goquery.Selection) {
 
 		player := PlayerDetailContainer{involved_in_substitution: false}
 
@@ -32,12 +33,6 @@ func processDocAndTeam(res *http.Response, players *[]PlayerDetailContainer, tea
 		row.Find("th").Each(func(j int, cell *goquery.Selection) {
 			statType, ok := cell.Attr("data-stat")
 			if ok {
-				//
-				//
-				//
-				//
-				//////// this is what;s printed to cl
-				fmt.Println(searchCode, cell.Text())
 				processPlayerCell(statType, cell, &player)
 			}
 		})
@@ -49,9 +44,31 @@ func processDocAndTeam(res *http.Response, players *[]PlayerDetailContainer, tea
 			}
 		})
 
-		*players = append(*players, player)
+		*homePlayers = append(*homePlayers, player)
+	
+	})
+	doc.Find(awaySearch).Each(func(i int, row *goquery.Selection) {
 
-})}
+		player := PlayerDetailContainer{involved_in_substitution: false}
+
+		//this will select and process the player name
+		row.Find("th").Each(func(j int, cell *goquery.Selection) {
+			statType, ok := cell.Attr("data-stat")
+			if ok {
+				processPlayerCell(statType, cell, &player)
+			}
+		})
+		//this will select and process all other player attributes
+		row.Find("td").Each(func(j int, cell *goquery.Selection) {
+			statType, ok := cell.Attr("data-stat")
+			if ok {
+				processPlayerCell(statType, cell, &player)
+			}
+		})
+
+		*awayPlayers = append(*awayPlayers, player)
+
+	})}
 
 func processPlayerCell(stat string, cell *goquery.Selection, player *PlayerDetailContainer) {
 
