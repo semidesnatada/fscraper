@@ -432,6 +432,43 @@ func (q *Queries) GetKnockoutMatchUrlsAndTeamOnlineIds(ctx context.Context) ([]G
 	return items, nil
 }
 
+const getKnockoutMatchUrlsAndTeamOnlineIdsWOffset = `-- name: GetKnockoutMatchUrlsAndTeamOnlineIdsWOffset :many
+SELECT url, home_team_online_id, away_team_online_id
+FROM knockout_matches
+ORDER BY url
+LIMIT 1000
+OFFSET $1
+`
+
+type GetKnockoutMatchUrlsAndTeamOnlineIdsWOffsetRow struct {
+	Url              string
+	HomeTeamOnlineID string
+	AwayTeamOnlineID string
+}
+
+func (q *Queries) GetKnockoutMatchUrlsAndTeamOnlineIdsWOffset(ctx context.Context, offset int32) ([]GetKnockoutMatchUrlsAndTeamOnlineIdsWOffsetRow, error) {
+	rows, err := q.db.QueryContext(ctx, getKnockoutMatchUrlsAndTeamOnlineIdsWOffset, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetKnockoutMatchUrlsAndTeamOnlineIdsWOffsetRow
+	for rows.Next() {
+		var i GetKnockoutMatchUrlsAndTeamOnlineIdsWOffsetRow
+		if err := rows.Scan(&i.Url, &i.HomeTeamOnlineID, &i.AwayTeamOnlineID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getKnockoutMatches = `-- name: GetKnockoutMatches :many
 SELECT id, competition_id, home_team_id, away_team_id, home_goals, away_goals, date, kick_off_time, referee_id, venue_id, attendance, home_xg, away_xg, went_to_pens, home_pens, away_pens, round, weekday, url, home_team_online_id, away_team_online_id FROM knockout_matches
 `

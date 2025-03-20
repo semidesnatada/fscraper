@@ -13,17 +13,20 @@ import (
 
 func main() {
 	
+// 8f1efd14-48af-451e-b99c-eb52fe29f88b == charlie hartfield for QPR
+
+
 	const DB_URL = "postgres://seanlowery:@localhost:5432/fscraped?sslmode=disable"
 	s := config.CreateState(DB_URL)
 
+	s.DeleteAllDatabases()
 	// s.DeleteDetailedDatabases()
-	// s.DeleteAllDatabases()
 	// s.DeleteSummaryDatabases()	
 
-	// client.ScrapeLeagues(&s)
-	// client.ScrapeKnockouts(&s)
+	client.ScrapeLeagues(&s)
+	client.ScrapeKnockouts(&s)
 
-	client.DetailedMatchScraper(&s)
+	// client.DetailedMatchScraper(&s)
 
 	// err := analysis.GetAndPrintKnockoutDraw(&s, "Champions-League", "2023-2024", 3)
 	// if err != nil {

@@ -15,65 +15,46 @@ func storeDetailedMatches(s *config.State, container DetailedMatchContainer) {
 	container = passAndClean(container)
 
 	for _, player := range container.homePlayers {
-		template := getRecordTemplate(s, container.matchUrl, container.HomeTeamOnlineID, container.isknockout, player)
-		storeTemplate(s, template)
+		template, tempErr := getRecordTemplate(s, container.matchUrl, container.HomeTeamOnlineID, container.isknockout, player)
+		if tempErr == nil {
+			storeTemplate(s, template)
+		} else {fmt.Printf("error in getting a template for player %s, %v\n", player.player_name, tempErr.Error())}
 	}
 	for _, player := range container.awayPlayers {
-		template := getRecordTemplate(s, container.matchUrl, container.AwayTeamOnlineID, container.isknockout, player)
-		storeTemplate(s, template)
+		template, tempErr := getRecordTemplate(s, container.matchUrl, container.AwayTeamOnlineID, container.isknockout, player)
+		if tempErr == nil {
+			storeTemplate(s, template)
+		} else {fmt.Printf("error in getting a template for player %s, %v\n", player.player_name, tempErr.Error())}
 	}
 }
 
-func getRecordTemplate(s *config.State, matchUrl string, teamOnlineID string, isKo bool, player PlayerDetailContainer) database.CreatePlayerMatchParams {
+func getRecordTemplate(s *config.State, matchUrl string, teamOnlineID string, isKo bool, player PlayerDetailContainer) (database.CreatePlayerMatchParams, error) {
 
 	// checking whether player exists
 	player_exists, pErr := s.DB.CheckIfPlayerExistsByUrl(context.Background(), player.player_url)
 	if pErr != nil {
-		fmt.Println("error checking whether player id exists from the url",pErr.Error())
-		os.Exit(1)
+		return database.CreatePlayerMatchParams{}, fmt.Errorf("error checking whether player id (for %s) exists from the url %w", player.player_name, pErr)
 	}
 
+	// get the right player from the database, or create the player if they don't exist
 	var player_id uuid.UUID
-
 	if player_exists {
 		p_id, err := s.DB.GetPlayerIdFromUrl(context.Background(), player.player_url)
 		if err != nil {
-			fmt.Println("error finding the player id from the url",err.Error())
-			os.Exit(1)
+			return database.CreatePlayerMatchParams{}, fmt.Errorf("error finding the player id (for %s) from the url %w", player.player_name, err)
 		}
 		player_id = p_id
 	} else {
-		playerResponse, err := s.DB.CreatePlayer(context.Background(), database.CreatePlayerParams{
-			ID: uuid.New(),
-			Name: player.player_name,
-			Nationality: player.nationality_link,
-			Url: player.player_url,
-		})
-		if err != nil {
-			fmt.Println("error finding the player id from the url",err.Error())
-			os.Exit(1)
+		playerResponse, cErr := createPlayerRecord(s, player)
+		if cErr != nil {
+			return database.CreatePlayerMatchParams{}, cErr
 		}
 		player_id = playerResponse.ID
 	}
 
-	var isKnockOut bool
-	var matchID uuid.UUID
-	var mErr error
-
-	if isKo {
-		isKnockOut = true
-		matchID, mErr = s.DB.GetKnockoutMatchIDFromUrl(context.Background(), matchUrl)
-		if mErr != nil {
-			fmt.Println("error geting the knockout match id from its url",mErr.Error())
-			os.Exit(1)
-		}
-	} else {
-		isKnockOut = false
-		matchID, mErr = s.DB.GetLeagueMatchIDFromUrl(context.Background(), matchUrl)
-		if mErr != nil {
-			fmt.Println("error geting the league match id from its url",mErr.Error())
-			os.Exit(1)
-		}
+	matchID, mErr := getMatchID(s, matchUrl, isKo)
+	if mErr != nil {
+		return database.CreatePlayerMatchParams{}, fmt.Errorf("error geting the match id from its url: %w", mErr)
 	}
 
 	recordTemplate := database.CreatePlayerMatchParams{
@@ -87,11 +68,48 @@ func getRecordTemplate(s *config.State, matchUrl string, teamOnlineID string, is
 		YellowCard: int32(player.yellow_card),
 		RedCard: int32(player.red_card),
 		OwnGoals: int32(player.own_goals),
-		IsKnockout: isKnockOut,
+		IsKnockout: isKo,
 		AtHome: player.home_or_away,
 	}
+	return recordTemplate, nil
+}
 
-	return recordTemplate
+func getMatchID(s *config.State, matchUrl string, isKo bool) (uuid.UUID, error)  {
+	if isKo {
+		matchID, mErr := s.DB.GetKnockoutMatchIDFromUrl(context.Background(), matchUrl)
+		return matchID, mErr
+
+	} else {
+		matchID, mErr := s.DB.GetLeagueMatchIDFromUrl(context.Background(), matchUrl)
+		return matchID, mErr
+	}
+}
+
+func createPlayerRecord(s *config.State, player PlayerDetailContainer) (database.Player, error) {
+	playerResponse, err := s.DB.CreatePlayer(context.Background(), database.CreatePlayerParams{
+		ID: uuid.New(),
+		Name: player.player_name,
+		Nationality: player.nationality_link,
+		Url: player.player_url,
+	})
+	if err == nil {
+		return playerResponse, nil
+	}
+
+	//instead of returning the error here, we use a wildcard player
+	//return database.CreatePlayerMatchParams{}, fmt.Errorf("error a new player (%s) in the db: %w", player.player_name, err)
+	wildcardPlayer, wErr := s.DB.CreatePlayer(context.Background(), database.CreatePlayerParams{
+		ID: uuid.New(),
+		Name: "wildcard",
+		Nationality: "kuwandrandian",
+		Url: "nationalgeographic.com",
+	})
+	if wErr == nil {
+		return wildcardPlayer, nil
+	} else {
+		return database.Player{}, fmt.Errorf("error adding a new player (%s) in the db: %w", player.player_name, wErr)
+	}
+
 }
 
 func passAndClean(d DetailedMatchContainer) DetailedMatchContainer {

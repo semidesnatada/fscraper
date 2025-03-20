@@ -80,7 +80,7 @@ func ScrapeLeagues(s *config.State) error {
 				continue
 			}
 			//if doesn't exist in db, then scrape it.
-			go GoScrapeLeague(comp, channel)
+			GoScrapeLeague(comp, channel)
 			<- ticker.C
 		}
 		close(channel)
@@ -118,19 +118,19 @@ func getLeagueParams() []compLeagueMetaRecord {
 	{
 		Name: "Premier-League",
 		OnlineCode: "9",
-		EarliestYear: 1991,
+		EarliestYear: 1992,
 		LatestYear: 2025,
 	},
 	{
 		Name: "La-Liga",
 		OnlineCode: "12",
-		EarliestYear: 1991,
+		EarliestYear: 1992,
 		LatestYear: 2025,
 	},
 	{
 		Name: "Bundesliga",
 		OnlineCode: "20",
-		EarliestYear: 1991,
+		EarliestYear: 1992,
 		LatestYear: 2025,
 	},
 	{
@@ -142,12 +142,13 @@ func getLeagueParams() []compLeagueMetaRecord {
 	{
 		Name: "Serie-A",
 		OnlineCode: "11",
-		EarliestYear: 1991,
+		EarliestYear: 1992,
 		LatestYear: 2025,
 	},
-	{
-		Name: "Championship",
-		OnlineCode: "10",
-		EarliestYear: 2014,
-		LatestYear: 2025,
-}}}
+// 	{
+// 		Name: "Championship",
+// 		OnlineCode: "10",
+// 		EarliestYear: 2014,
+// 		LatestYear: 2025,
+// },
+}}

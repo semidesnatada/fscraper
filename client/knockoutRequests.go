@@ -78,7 +78,7 @@ func ScrapeKnockouts(s *config.State) error {
 				continue
 			}
 			//if doesn't exist in db, then scrape it.
-			go GoScrapeKnockout(comp, channel)
+			GoScrapeKnockout(comp, channel)
 			<- ticker.C
 		}
 		close(channel)
@@ -117,13 +117,19 @@ func getKnockoutParams() []compKnockoutMetaRecord {
 	{
 		Name: "FA-Cup",
 		OnlineCode: "514",
-		EarliestYear: 2022,
+		EarliestYear: 1992,
 		LatestYear: 2024,
 	},
 	{
 		Name: "Champions-League",
 		OnlineCode: "8",
-		EarliestYear: 2022,
+		EarliestYear: 1992,
+		LatestYear: 2024,
+	},
+	{
+		Name: "Europa-League",
+		OnlineCode: "19",
+		EarliestYear: 1992,
 		LatestYear: 2024,
 	},
 }}

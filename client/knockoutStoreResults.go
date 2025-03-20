@@ -27,7 +27,9 @@ func storeKnockoutMatchSummaries(s *config.State, matches CompetitionSeasonSumma
 
 		err := processKnockoutMatchSummary(s, match, &matchParams)
 		if err != nil {
-			return err
+			fmt.Printf("error processing match, moving to next %s\n", err.Error())
+			//return err
+			continue
 		}
 
 		_, dbErr := s.DB.CreateKnockoutMatch(

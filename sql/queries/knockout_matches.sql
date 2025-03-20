@@ -94,6 +94,13 @@ FROM knockout_matches;
 SELECT url, home_team_online_id, away_team_online_id
 FROM knockout_matches;
 
+-- name: GetKnockoutMatchUrlsAndTeamOnlineIdsWOffset :many
+SELECT url, home_team_online_id, away_team_online_id
+FROM knockout_matches
+ORDER BY url
+LIMIT 1000
+OFFSET $1;
+
 -- name: GetKnockoutMatchIDFromUrl :one
 SELECT id
 FROM knockout_matches
