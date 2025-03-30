@@ -156,6 +156,49 @@ func (q *Queries) GetPlayerNameFromId(ctx context.Context, id uuid.UUID) (string
 	return name, err
 }
 
+const getPlayerUUIDsOrderedByUrl = `-- name: GetPlayerUUIDsOrderedByUrl :many
+SELECT id
+FROM players
+ORDER BY url
+LIMIT 5000
+`
+
+func (q *Queries) GetPlayerUUIDsOrderedByUrl(ctx context.Context) ([]uuid.UUID, error) {
+	rows, err := q.db.QueryContext(ctx, getPlayerUUIDsOrderedByUrl)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPlayerUrlFromId = `-- name: GetPlayerUrlFromId :one
+SELECT url
+FROM players
+WHERE id = $1
+`
+
+func (q *Queries) GetPlayerUrlFromId(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.db.QueryRowContext(ctx, getPlayerUrlFromId, id)
+	var url string
+	err := row.Scan(&url)
+	return url, err
+}
+
 const getPlayersByName = `-- name: GetPlayersByName :many
 SELECT id, name, nationality, url FROM players
 WHERE name = $1

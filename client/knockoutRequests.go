@@ -14,7 +14,7 @@ import (
 func GenerateKnockoutsForSearching() []CompetitionSeasonSummary {
 
 	var output []CompetitionSeasonSummary
-	KnockoutParameters := getKnockoutParams()
+	KnockoutParameters := GetKnockoutParams()
 
 	for _, comp := range KnockoutParameters {
 		for i := comp.EarliestYear; i < comp.LatestYear; i++ {
@@ -112,7 +112,7 @@ func GoScrapeKnockout(comp CompetitionSeasonSummary, channel chan CompetitionSea
 	channel <- comp
 }
 
-func getKnockoutParams() []compKnockoutMetaRecord {
+func GetKnockoutParams() []compKnockoutMetaRecord {
 	return []compKnockoutMetaRecord {
 	{
 		Name: "FA-Cup",

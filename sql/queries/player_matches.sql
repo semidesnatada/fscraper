@@ -54,3 +54,7 @@ WHERE match_id = $1 and player_id = $2;
 
 -- name: DeletePlayerMatches :exec
 DELETE FROM player_matches;
+
+-- name: DeleteRecordsForGivenMatchUrl :exec
+DELETE FROM player_matches
+WHERE player_matches.match_url = $1;

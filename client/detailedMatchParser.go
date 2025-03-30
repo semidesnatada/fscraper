@@ -9,7 +9,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-func processDocAndTeam(res *http.Response, homePlayers *[]PlayerDetailContainer, awayPlayers *[]PlayerDetailContainer, homeCode string, awayCode string) {
+func processDocAndTeam(res *http.Response, homePlayers *[]PlayerDetailContainer, awayPlayers *[]PlayerDetailContainer, homeCode string, awayCode string, rowUrl string) {
 
 	// defer res.Body.Close()
 	
@@ -55,14 +55,20 @@ func processDocAndTeam(res *http.Response, homePlayers *[]PlayerDetailContainer,
 		row.Find("th").Each(func(j int, cell *goquery.Selection) {
 			statType, ok := cell.Attr("data-stat")
 			if ok {
-				processPlayerCell(statType, cell, &player)
+				err := processPlayerCell(statType, cell, &player)
+				if err != nil {
+					return
+				}
 			}
 		})
 		//this will select and process all other player attributes
 		row.Find("td").Each(func(j int, cell *goquery.Selection) {
 			statType, ok := cell.Attr("data-stat")
 			if ok {
-				processPlayerCell(statType, cell, &player)
+				err := processPlayerCell(statType, cell, &player)
+				if err != nil {
+					return
+				}
 			}
 		})
 
@@ -70,7 +76,7 @@ func processDocAndTeam(res *http.Response, homePlayers *[]PlayerDetailContainer,
 
 	})}
 
-func processPlayerCell(stat string, cell *goquery.Selection, player *PlayerDetailContainer) {
+func processPlayerCell(stat string, cell *goquery.Selection, player *PlayerDetailContainer) error {
 
 	switch stat {
 	case "player":
@@ -78,17 +84,23 @@ func processPlayerCell(stat string, cell *goquery.Selection, player *PlayerDetai
 		link, ok := cell.Find("a").Attr("href")
 		if ok {
 			player.player_url = link
+		} else {
+			return fmt.Errorf("issue with accessing the player name / url")
 		}
 	case "nationality":
 		player.nationality = cell.Find("a").Text()
 		n, ok := cell.Find("a").Attr("href")
 		if ok {
 			player.nationality_link = n
+		} else {
+			return fmt.Errorf("issue with accessing the player nationality")
 		}
 	case "age":
 		age := cell.Text()
-		player.ageYears = age[0:2]
-		player.ageDays = age[3:]
+		if len(age) == 6 {
+			player.ageYears = age[0:2]
+			player.ageDays = age[3:]
+		} else {return fmt.Errorf("couldn't access player age")}
 	case "minutes":
 		if mins := cell.Text(); mins == "90" {
 			player.mins_played = 90
@@ -97,49 +109,44 @@ func processPlayerCell(stat string, cell *goquery.Selection, player *PlayerDetai
 			player.involved_in_substitution = true
 			nMins, err := strconv.Atoi(mins)
 			if err != nil {
-				fmt.Println(err.Error())
-				os.Exit(1)
+				return err
 			}
 			player.mins_played = nMins
 		}
 	case "goals":
 		gls, gErr := strconv.Atoi(cell.Text())
 		if gErr != nil {
-			fmt.Println(gErr.Error())
-			os.Exit(1)
+			return gErr
 		}
 		player.goals = gls
 	case "pens_made":
 		pens, pErr := strconv.Atoi(cell.Text())
 		if pErr != nil {
-			fmt.Println(pErr.Error())
-			os.Exit(1)
+			return pErr
 		}
 		player.penalties = pens
 	case "cards_yellow":
 		ycs, yErr := strconv.Atoi(cell.Text())
 		if yErr != nil {
-			fmt.Println(yErr.Error())
-			os.Exit(1)
+			return yErr
 		}
 		player.yellow_card = ycs
 	case "cards_red":
 		rcs, rErr := strconv.Atoi(cell.Text())
 		if rErr != nil {
-			fmt.Println(rErr.Error())
-			os.Exit(1)
+			return rErr
 		}
 		player.red_card = rcs
 	case "own_goals":
 		ogs, oErr := strconv.Atoi(cell.Text())
 		if oErr != nil {
-			fmt.Println(oErr.Error())
-			os.Exit(1)
+			return oErr
 		}
 		player.own_goals = ogs
 	default:
-		return
+		return nil
 	}
+	return nil
 }
 
 type DetailedMatchContainer struct {

@@ -57,7 +57,7 @@ FROM league_matches;
 SELECT url, home_team_online_id, away_team_online_id
 FROM league_matches
 ORDER BY url
-LIMIT 1000
+LIMIT 5000
 OFFSET $1;
 
 -- name: GetLeagueMatchIDFromUrl :one

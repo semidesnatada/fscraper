@@ -6,7 +6,7 @@ PGUSER=seanlowery
 PGDATABASE=fscraped
 
 # Add own backup link to the below variable
-DB_BACKUP_LINK=db_backups/fscraped_2025-03-15_2001.tar
+DB_BACKUP_LINK=db_backups/fscraped_2025-03-24_2206.tar
 
 pg_restore -U "$PGUSER" -d "$PGDATABASE" "$DB_BACKUP_LINK" --clean
 

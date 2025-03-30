@@ -1,3 +1,7 @@
 fscrape_dump
 .DS_Store
 db_backups/
+db_player_matches_write_errors/
+db_webpage_store/
+GetAllPlayersAndSharedMinsByID-TestOutputs/
+graph_dumps/

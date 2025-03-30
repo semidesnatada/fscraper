@@ -16,7 +16,7 @@ import (
 func GenerateLeaguesForSearching() []CompetitionSeasonSummary {
 
 	var output []CompetitionSeasonSummary
-	LeagueParameters := getLeagueParams()
+	LeagueParameters := GetLeagueParams()
 
 	for _, comp := range LeagueParameters {
 		for i := comp.EarliestYear; i < comp.LatestYear; i++ {
@@ -113,7 +113,7 @@ func GoScrapeLeague(comp CompetitionSeasonSummary, channel chan CompetitionSeaso
 	channel <- comp
 }
 
-func getLeagueParams() []compLeagueMetaRecord {
+func GetLeagueParams() []compLeagueMetaRecord {
 	return []compLeagueMetaRecord {
 	{
 		Name: "Premier-League",

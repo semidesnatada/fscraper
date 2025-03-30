@@ -44,5 +44,16 @@ SELECT id
 FROM players
 WHERE url = $1;
 
+-- name: GetPlayerUrlFromId :one
+SELECT url
+FROM players
+WHERE id = $1;
+
+-- name: GetPlayerUUIDsOrderedByUrl :many
+SELECT id
+FROM players
+ORDER BY url
+LIMIT 5000;
+
 -- name: DeletePlayers :exec
 DELETE FROM players;

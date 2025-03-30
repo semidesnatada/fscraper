@@ -147,6 +147,16 @@ func (q *Queries) DeletePlayerMatches(ctx context.Context) error {
 	return err
 }
 
+const deleteRecordsForGivenMatchUrl = `-- name: DeleteRecordsForGivenMatchUrl :exec
+DELETE FROM player_matches
+WHERE player_matches.match_url = $1
+`
+
+func (q *Queries) DeleteRecordsForGivenMatchUrl(ctx context.Context, matchUrl string) error {
+	_, err := q.db.ExecContext(ctx, deleteRecordsForGivenMatchUrl, matchUrl)
+	return err
+}
+
 const getPlayerMatchFromIds = `-- name: GetPlayerMatchFromIds :one
 SELECT match_id, player_id, match_url, first_minute, last_minute, goals, penalties, yellow_card, red_card, own_goals, is_knockout, at_home
 FROM player_matches
