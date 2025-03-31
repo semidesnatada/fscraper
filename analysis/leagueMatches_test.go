@@ -58,9 +58,13 @@ func CheckLeagueTable(s *config.State, leagueName string, leagueSeason string) e
 	var totalGoalsScored int
 	var totalGoalsConceded int
 	var totalGamesPlayed int
+	gpCheck := rows[0].GamesPlayed
 
 	for _, row := range rows {
 		if row.GamesPlayed != 2 * int64(noOfTeams - 1) {
+			return fmt.Errorf("error with the games played by %s in the season %s %s",row.TeamName, leagueName, leagueSeason)
+		}
+		if row.GamesPlayed != gpCheck {
 			return fmt.Errorf("error with the games played by %s in the season %s %s",row.TeamName, leagueName, leagueSeason)
 		}
 		if row.Points != (row.Draws + row.Wins * 3) {
@@ -77,6 +81,7 @@ func CheckLeagueTable(s *config.State, leagueName string, leagueSeason string) e
 		totalGoalsScored += int(row.GoalsScored)
 		totalGoalsConceded += int(row.GoalsConceded)
 		totalGamesPlayed += int(row.GamesPlayed)
+
 	}
 
 	if totalWins != totalLosses {

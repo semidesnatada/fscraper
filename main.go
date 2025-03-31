@@ -43,9 +43,19 @@ func main() {
 	// 	fmt.Println(xErr.Error())
 	// }
 
-	testDBShortestPath(&s)
+	// testDBShortestPath(&s)
+	// testPlayerPathDetailedStats(&s)
+	// testGettingAllPaths(&s)
 
-	// analysis.TestPlayerMatchData(&s, 9)
+	// fmt.Println()
+	// fmt.Println()
+	// fmt.Println()
+
+	analysis.TestPlayerMatchData(&s, 9)
+
+	// this call now done via testing
+	// analysis.CheckAllLeagueTables(&s)
+
 	// analysis.PrintAllLeagueTables(&s)
 
 	// checkErr := analysis.CheckAllLeagueTables(&s)
@@ -149,7 +159,7 @@ func testDBShortestPath(s *config.State) {
 	}
 	}
 	
-	gFilename := "test_graph_dump"
+	gFilename := "master_graph_dump_test"
 
 	e:= g.Write(gFilename)
 	if e != nil {
@@ -174,6 +184,91 @@ func testDBShortestPath(s *config.State) {
 	} else {
 		fmt.Printf("%d : %s\n", i, step)
 	}
+	}
+}
+
+func testPlayerPathDetailedStats(s *config.State) {
+
+	// p1 := "/en/players/003cf4d1/Jayden-Danns"
+	// p2 := "/en/players/0ac94a23/Denis-Cheryshev"
+	// p2 := "/en/players/042cac2d/Moritz-Stoppelkamp"
+	// p1 := "/en/players/03760df0/Emiliano-Viviano"
+	// p2 := "/en/players/030928e4/Slaven-Bilic"
+	// p2 := "/en/players/032f766b/Ali-Al-Habsi"
+	// p2 := "/en/players/042e8a49/Kingsley-Coman"
+
+	// p1 := "/en/players/dc001a06/Xabi-Alonso"
+	// p2 := "/en/players/1ddbb0da/Iker-Casillas"
+
+	// p1 := "/en/players/e06683ca/Virgil-van-Dijk"
+	// p1 := "/en/players/cd1acf9d/Trent-Alexander-Arnold"
+	// p2 := "/en/players/4c370d81/Roberto-Firmino"
+	// p1 := "/en/players/c691bfe2/Sadio-Mane"
+	// p2 := "/en/players/38c7feef/Alex-Oxlade-Chamberlain"
+
+	p1 := "/en/players/002d06bb/Sylvain-Distin"
+	p2 := "/en/players/08511d65/Sergio-Ramos"
+	
+	gFilename := "master_graph_dump_test"
+
+	Q, e2 := analysis.ReadGraphFromFile(gFilename)
+	if e2 != nil {
+		fmt.Println(e2.Error())
+		os.Exit(1)
+	}
+
+	path3, sharedmins3, err4 := Q.GetShortestConnectionBetweenPlayerUrls(s, p1, p2)
+	if err4 != nil {
+		fmt.Println(err4.Error())
+		os.Exit(1)
+	}
+	fmt.Printf("shortest path between %s and %s is:\n", p1, p2)
+	for i, step := range path3 {
+		if i < len(path3) -1 {
+		fmt.Printf("%d : %s, played %d minutes with:\n", i, step, sharedmins3[i+1])
+	} else {
+		fmt.Printf("%d : %s\n", i, step)
+	}
+	}
+
+	out, err := analysis.GetPathDetailedStatsFromUrls(s, path3)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	out.PrintPath(s)
+
+}
+
+func testGettingAllPaths(s *config.State) {
+
+	//10097 : [/en/players/96cf7b61/Wes-Foderingham /en/players/57827369/Ben-Brereton /en/players/4bd414c1/Raul-Albiol /en/players/08511d65/Sergio-Ramos]
+	// 86 : [/en/players/824c7343/Graham-Potter /en/players/10e485ae/Eyal-Berkovic /en/players/9be05f40/Steve-McManaman /en/players/1ddbb0da/Iker-Casillas /en/players/08511d65/Sergio-Ramos]
+	// 87 : [/en/players/892d2b5f/Ali-Dia /en/players/10e485ae/Eyal-Berkovic /en/players/9be05f40/Steve-McManaman /en/players/1ddbb0da/Iker-Casillas /en/players/08511d65/Sergio-Ramos]
+	/// en/players/231f7c03/Glenn-Hoddle /en/players/8cd0120b/Scott-Minto /en/players/f1e8372d/Jermain-Defoe /en/players/21a66f6a/Harry-Kane /en/players/042e8a49/Kingsley-Coman
+	
+	gFilename := "master_graph_dump_test"
+
+	Q, e2 := analysis.ReadGraphFromFile(gFilename)
+	if e2 != nil {
+		fmt.Println(e2.Error())
+		os.Exit(1)
+	}
+
+	// p2 := "/en/players/08511d65/Sergio-Ramos"
+	p2 := "/en/players/042e8a49/Kingsley-Coman"
+	paths, err := Q.GetPathsBelowGivenLength(p2, 5, s)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	for i, path := range paths {
+		if i == 4{
+			fmt.Printf("All players a distance %d away from %s\n", i, p2)
+			for j, x := range path {
+				fmt.Println(j, ":", x)
+			}}
 	}
 }
 

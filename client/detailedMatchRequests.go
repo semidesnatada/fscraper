@@ -17,7 +17,8 @@ import (
 func DetailedMatchScraper(s *config.State) error {
 
 	// get match urls via query to database
-	leagueMatchUrls, lErr := s.DB.GetLeagueMatchUrlsAndTeamOnlineIdsWOffset(context.Background(), 50000)
+	// leagueMatchUrls, lErr := s.DB.GetLeagueMatchUrlsAndTeamOnlineIdsWOffset(context.Background(), 0)
+	leagueMatchUrls_f, lErr := s.DB.GetLeagueMatchUrlsAndTeamOnlineIds(context.Background())
 	if lErr != nil {
 		return lErr
 	}
@@ -25,6 +26,11 @@ func DetailedMatchScraper(s *config.State) error {
 	// if kErr != nil {
 	// 	return kErr
 	// }
+
+	leagueMatchUrls := []database.GetLeagueMatchUrlsAndTeamOnlineIdsWOffsetRow{}
+	for _, m := range leagueMatchUrls_f {
+		leagueMatchUrls = append(leagueMatchUrls, database.GetLeagueMatchUrlsAndTeamOnlineIdsWOffsetRow{Url:m.Url, HomeTeamOnlineID: m.HomeTeamOnlineID , AwayTeamOnlineID: m.AwayTeamOnlineID})
+	}
 
 	leErr := scrapeLeaguesMatches(s, leagueMatchUrls)
 	if leErr != nil {

@@ -227,6 +227,83 @@ func (g PlayerAdjacencyGraph) GetShortestConnectionBetweenPlayerUrls(s *config.S
 	return outputs, outputi, nil
 }
 
+func (g PlayerAdjacencyGraph) GetPathsBelowGivenLength(startUrl string, searchDepth int, s *config.State) (map[int][][]string, error) {
+
+	startu, err := s.DB.GetPlayerIdFromUrl(context.Background(), startUrl)
+	if err != nil {
+		return map[int][][]string{}, err
+	}
+	start := PlayerID(startu)
+
+	interMap, err2 := g.BfsGetAllValidPathsBelowGivenSize(start, searchDepth, s)
+	if err2 != nil {
+		return map[int][][]string{}, err2
+	}
+
+	out := make(map[int][][]string)
+	for level, IDList := range interMap {
+		urlsList := [][]string{}
+		for _, idPath := range IDList {
+			urls := []string{}
+			for _, id := range idPath {
+				url, uErr := s.DB.GetPlayerUrlFromId(context.Background(), uuid.UUID(id))
+				if uErr != nil {
+					return map[int][][]string{}, uErr
+				}
+				urls = append(urls, url)
+		}
+		urlsList = append(urlsList, urls)
+		}
+		out[level] = urlsList
+	}
+
+	return out, nil
+}
+
+func (g PlayerAdjacencyGraph) BfsGetAllValidPathsBelowGivenSize(start PlayerID, searchDepth int, s *config.State) (map[int][]IDList, error) {
+
+	paths := map[int][]IDList{}
+
+	visited := IDList{}
+	// toVisit := IDList{start}
+	pathMap := make(Path)
+
+	nodesAtPrevDepth := IDList{start}
+	// toVisitAtThisDepth := IDList{}
+
+	for i := 1; i <= searchDepth ; i++ {
+		// at depth 1, add a path back to the start for each of the neighbours of the start node to the map at key 1
+		// at depth 2, loop through the neighbours of the start node and add
+		toVisitAtThisDepth := IDList{}
+		pathsAtThisDepth := []IDList{}
+
+		for _, node := range nodesAtPrevDepth {
+			neighbs := g.GetSortedListOfNeighbours(node)
+			for _, neigh := range neighbs {
+				if !slices.Contains(visited, neigh) {
+					toVisitAtThisDepth = append(toVisitAtThisDepth, neigh)
+					visited = append(visited, neigh)
+					pathMap[neigh] = node
+				}
+			}
+		}
+
+		for _, node := range toVisitAtThisDepth {
+			path := IDList{}
+			for c := node; c != start; {
+				path = append(path, c)
+				c = pathMap[c]
+			}
+			path = append(path, start)
+			pathsAtThisDepth = append(pathsAtThisDepth, path)
+		}
+		nodesAtPrevDepth = toVisitAtThisDepth
+		paths[i] = pathsAtThisDepth
+	}
+
+	return paths, nil
+}
+
 func (g PlayerAdjacencyGraph) Write(filename string) error {
 	dat, err1 := json.Marshal(g)
 	if err1 != nil {

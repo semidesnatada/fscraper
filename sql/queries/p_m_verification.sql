@@ -29,6 +29,8 @@ INNER JOIN competitions AS C ON C.id = LM.competition_id
 WHERE PM.at_home IS FALSE
 GROUP BY team_name, competition_name, match_id, player_id
 ) s
+INNER JOIN players ON player_id = players.id
+WHERE NOT players.name = 'fakeRedCard'
 GROUP BY team_name, competition_name
 ORDER BY players_fielded DESC, matches_played DESC;
 
@@ -69,6 +71,8 @@ INNER JOIN competitions AS C ON C.id = LM.competition_id
 WHERE PM.at_home IS FALSE
 GROUP BY team_name, competition_name, competition_season, match_id, player_id
 ) s
+INNER JOIN players ON player_id = players.id
+WHERE NOT players.name = 'fakeRedCard'
 GROUP BY team_name, competition_name, competition_season
 ORDER BY total_goals_scored DESC;
 
@@ -106,6 +110,7 @@ WHERE players.url = $1
 ) AS GAMES_IN_SCOPE
 INNER JOIN player_matches AS OTHERS ON (OTHERS.match_id = GAMES_IN_SCOPE.match_id AND OTHERS.at_home = GAMES_IN_SCOPE.target_at_home)
 INNER JOIN players AS P ON P.id = OTHERS.player_id 
+WHERE NOT OTHERS.name = 'fakeRedCard'
 GROUP BY P.name, P.url, P.id
 ORDER BY total_mins_played DESC;
 
@@ -201,12 +206,50 @@ INNER JOIN players ON players.id = player_matches.player_id
 WHERE players.id = $1
 ) AS GAMES_IN_SCOPE
 INNER JOIN player_matches AS OTHERS ON (OTHERS.match_id = GAMES_IN_SCOPE.match_id AND OTHERS.at_home = GAMES_IN_SCOPE.target_at_home)
-RIGHT JOIN players AS P ON P.id = OTHERS.player_id 
+RIGHT JOIN players AS P ON P.id = OTHERS.player_id
+WHERE NOT P.name = 'fakeRedCard'
 GROUP BY P.name, P.url, P.id
-HAVING SUM(CASE WHEN LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min)> 0 THEN LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min) ELSE 0 END) > 0
-ORDER BY shared_minutes DESC
-LIMIT 3500;
+HAVING SUM(LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min))> 0
+ORDER BY shared_minutes DESC;
+-- LIMIT 3500;
 
+-- name: GetSharedLeagueStatsForTwoPlayersByIDs :many
+SELECT
+    P.id AS other_player_id,
+    SUM(CASE WHEN LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min)> 0 THEN LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min) ELSE 0 END) as shared_minutes,
+    COUNT(*) AS shared_matches,
+    competitions.name as comp_name,
+    competitions.season as comp_season,
+    TEXT(CASE WHEN GAMES_IN_SCOPE.target_at_home THEN HT.name ELSE AT.name END) AS team_name
+FROM (
+SELECT
+    match_id,
+    at_home AS target_at_home,
+    first_minute AS t_first_min,
+    last_minute AS t_last_min
+FROM player_matches
+INNER JOIN players ON players.id = player_matches.player_id
+WHERE players.id = $1
+) AS GAMES_IN_SCOPE
+INNER JOIN player_matches AS OTHERS ON (OTHERS.match_id = GAMES_IN_SCOPE.match_id AND OTHERS.at_home = GAMES_IN_SCOPE.target_at_home)
+RIGHT JOIN players AS P ON P.id = OTHERS.player_id 
+INNER JOIN league_matches ON GAMES_IN_SCOPE.match_id = league_matches.id
+INNER JOIN competitions ON league_matches.competition_id = competitions.id
+INNER JOIN teams AS HT ON HT.id = league_matches.home_team_id
+INNER JOIN teams AS AT ON AT.id = league_matches.away_team_id
+WHERE P.id = $2
+GROUP BY P.name, P.url, P.id, competitions.name, competitions.season, team_name
+HAVING SUM(LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min))> 0
+ORDER BY shared_minutes DESC;
+
+
+-- name: GetCompTableFromPM :many
+SELECT player_id
+FROM player_matches
+INNER JOIN league_matches ON player_matches.match_id = league_matches.id
+INNER JOIN competitions ON league_matches.competition_id = competitions.id
+WHERE competitions.name = $1 AND competitions.season = $2
+LIMIT 20;
 -- SELECT
 --     P.id AS other_player_id,
 --     SUM(CASE WHEN LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min)> 0 THEN LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min) ELSE 0 END) as shared_minutes

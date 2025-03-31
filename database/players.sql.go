@@ -75,9 +75,11 @@ func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (Pla
 }
 
 const deletePlayers = `-- name: DeletePlayers :exec
+
 DELETE FROM players
 `
 
+// LIMIT 5000;
 func (q *Queries) DeletePlayers(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, deletePlayers)
 	return err
@@ -159,8 +161,8 @@ func (q *Queries) GetPlayerNameFromId(ctx context.Context, id uuid.UUID) (string
 const getPlayerUUIDsOrderedByUrl = `-- name: GetPlayerUUIDsOrderedByUrl :many
 SELECT id
 FROM players
+WHERE NOT name = 'fakeRedCard'
 ORDER BY url
-LIMIT 5000
 `
 
 func (q *Queries) GetPlayerUUIDsOrderedByUrl(ctx context.Context) ([]uuid.UUID, error) {
