@@ -339,32 +339,6 @@ func ReadGraphFromFile(filename string) (PlayerAdjacencyGraph, error) {
 
 }
 
-// func (a AdjacencyMap) MarshalJSON() ([]byte, error) {
-
-// 	bytes := []byte{}
-
-// 	return bytes, nil
-// }
-
-// func (p PlayerID) MarshalJSON() ([]byte, error) {
-
-// 	bytes := []byte{}
-
-// 	return bytes, nil
-// }
-
-// func (u *PlayerID) MarshalJSON() ([]byte, error) {
-//     return []byte(fmt.Sprintf("\"%s\"", uuid.UUID(*u).String())), nil
-// }
-// func (u *PlayerID) UnmarshalJSON(b []byte) error {
-//     id, err := uuid.Parse(string(b[:]))
-//     if err != nil {
-//             return err
-//     }
-//     *u = PlayerID(id)
-//     return nil
-// }
-
 // functions for marshalling the graph to json
 func (u *PlayerID) ProcessEncode() (string, error) {
 	return fmt.Sprintf("\"%s\"", uuid.UUID(*u).String()), nil

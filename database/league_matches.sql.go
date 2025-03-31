@@ -111,6 +111,62 @@ func (q *Queries) DeleteLeagueMatches(ctx context.Context) error {
 	return err
 }
 
+const getLeagueGamesBySeason = `-- name: GetLeagueGamesBySeason :many
+SELECT 
+M.id as id,
+HT.name as home_team, 
+AT.name as away_team, 
+M.home_goals as home_goals, 
+M.away_goals as away_goals
+FROM league_matches as M
+INNER JOIN teams as HT on HT.id = M.home_team_id
+INNER JOIN teams as AT on AT.id = M.away_team_id
+INNER JOIN competitions on competitions.id = M.competition_id
+WHERE competitions.name = $1 AND competitions.season = $2
+`
+
+type GetLeagueGamesBySeasonParams struct {
+	Name   string
+	Season string
+}
+
+type GetLeagueGamesBySeasonRow struct {
+	ID        uuid.UUID
+	HomeTeam  string
+	AwayTeam  string
+	HomeGoals int32
+	AwayGoals int32
+}
+
+func (q *Queries) GetLeagueGamesBySeason(ctx context.Context, arg GetLeagueGamesBySeasonParams) ([]GetLeagueGamesBySeasonRow, error) {
+	rows, err := q.db.QueryContext(ctx, getLeagueGamesBySeason, arg.Name, arg.Season)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetLeagueGamesBySeasonRow
+	for rows.Next() {
+		var i GetLeagueGamesBySeasonRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.HomeTeam,
+			&i.AwayTeam,
+			&i.HomeGoals,
+			&i.AwayGoals,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLeagueGamesByTeamAndSeason = `-- name: GetLeagueGamesByTeamAndSeason :many
 SELECT 
 HT.name as home_team, 

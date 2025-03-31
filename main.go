@@ -51,7 +51,12 @@ func main() {
 	// fmt.Println()
 	// fmt.Println()
 
-	analysis.TestPlayerMatchData(&s, 9)
+	// analysis.TestPlayerMatchData(&s, 9)
+	analysis.PrintLeagueTableFromBothDBs(&s, "Serie-A", "2012-2013")
+	err := analysis.VerifyBothDBs(&s)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 
 	// this call now done via testing
 	// analysis.CheckAllLeagueTables(&s)

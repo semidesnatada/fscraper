@@ -105,12 +105,96 @@ func (q *Queries) GetAllTimeTopScorers(ctx context.Context) ([]GetAllTimeTopScor
 }
 
 const getCompTableFromPM = `-- name: GetCompTableFromPM :many
-SELECT player_id
-FROM player_matches
-INNER JOIN league_matches ON player_matches.match_id = league_matches.id
-INNER JOIN competitions ON league_matches.competition_id = competitions.id
-WHERE competitions.name = $1 AND competitions.season = $2
-LIMIT 20
+SELECT
+    team_name,
+    SUM(matches_played) as matches_played,
+    SUM(goals_scored) as goals_scored,
+    SUM(goals_conceded) as goals_conceded,
+    SUM(goal_difference) as goal_difference,
+    SUM(wins) as wins,
+    SUM(draws) as draws,
+    SUM(losses) as losses,
+    SUM(points) as points
+FROM (
+SELECT
+    home_team_name as team_name,
+    COUNT(*) as matches_played,
+    SUM(home_goals_scored) + SUM(away_ogs) as goals_scored,
+    SUM(away_goals_scored) + SUM(home_ogs) as goals_conceded,
+    SUM(home_goals_scored) + SUM(away_ogs) - SUM(away_goals_scored) - SUM(home_ogs) as goal_difference,
+    SUM(CASE WHEN home_goals_scored + away_ogs > away_goals_scored + home_ogs THEN 1 ELSE 0 END) as wins,
+    SUM(CASE WHEN home_goals_scored + away_ogs = away_goals_scored + home_ogs THEN 1 ELSE 0 END) as draws,
+    SUM(CASE WHEN home_goals_scored + away_ogs < away_goals_scored + home_ogs THEN 1 ELSE 0 END) as losses,
+    SUM((CASE WHEN home_goals_scored + away_ogs > away_goals_scored + home_ogs THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals_scored + away_ogs = away_goals_scored + home_ogs THEN 1 ELSE 0 END)) as points
+    -- SUM(home_goals_scored) as goals_scored,
+    -- SUM(away_goals_scored) as goals_conceded,
+    -- SUM(home_goals_scored) - SUM(away_goals_scored) as goal_difference,
+    -- SUM(CASE WHEN home_goals_scored > away_goals_scored THEN 1 ELSE 0 END) as wins,
+    -- SUM(CASE WHEN home_goals_scored = away_goals_scored THEN 1 ELSE 0 END) as draws,
+    -- SUM(CASE WHEN home_goals_scored < away_goals_scored THEN 1 ELSE 0 END) as losses,
+    -- SUM((CASE WHEN home_goals_scored > away_goals_scored THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals_scored = away_goals_scored THEN 1 ELSE 0 END)) as points
+FROM (SELECT
+    PM.match_id as match_id,
+    HT.name as home_team_name,
+    AT.name as away_team_name,
+    SUM(CASE WHEN PM.at_home THEN PM.goals ELSE 0 END) as home_goals_scored,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.goals ELSE 0 END) as away_goals_scored,
+    SUM(CASE WHEN PM.at_home THEN PM.red_card ELSE 0 END) as home_red_cards,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.red_card ELSE 0 END) as away_red_cards,
+    SUM(CASE WHEN PM.at_home THEN PM.yellow_card ELSE 0 END) as home_yellow_cards,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.yellow_card ELSE 0 END) as away_yellow_cards,
+    SUM(CASE WHEN PM.at_home THEN PM.penalties ELSE 0 END) as home_penalties,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.penalties ELSE 0 END) as away_penalties,
+    SUM(CASE WHEN PM.at_home THEN PM.own_goals ELSE 0 END) as home_ogs,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.own_goals ELSE 0 END) as away_ogs
+FROM player_matches AS PM
+INNER JOIN league_matches AS LM ON PM.match_id = LM.id
+INNER JOIN competitions AS C ON C.id = LM.competition_id
+INNER JOIN players ON PM.player_id = players.id
+INNER JOIN teams AS HT ON HT.id = LM.home_team_id
+INNER JOIN teams AS AT ON AT.id = LM.away_team_id
+WHERE C.name = $1 AND C.season = $2 AND NOT players.name = 'fakeRedCard'
+GROUP BY HT.name, AT.name, PM.match_id
+) s
+GROUP BY home_team_name
+UNION ALL
+SELECT
+    away_team_name as team_name,
+    COUNT(*) as matches_played,
+    SUM(away_goals_scored) + SUM(home_ogs) as goals_scored,
+    SUM(home_goals_scored) + SUM(away_ogs) as goals_conceded,
+    SUM(away_goals_scored) + SUM(home_ogs) - SUM(home_goals_scored) - SUM(away_ogs) as goal_difference,
+    SUM(CASE WHEN home_goals_scored + away_ogs < away_goals_scored + home_ogs THEN 1 ELSE 0 END) as wins,
+    SUM(CASE WHEN home_goals_scored + away_ogs = away_goals_scored + home_ogs THEN 1 ELSE 0 END) as draws,
+    SUM(CASE WHEN home_goals_scored + away_ogs > away_goals_scored + home_ogs THEN 1 ELSE 0 END) as losses,
+    SUM((CASE WHEN home_goals_scored + away_ogs < away_goals_scored + home_ogs THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals_scored + away_ogs = away_goals_scored + home_ogs THEN 1 ELSE 0 END)) as points
+FROM (SELECT
+    PM.match_id as match_id,
+    HT.name as home_team_name,
+    AT.name as away_team_name,
+    SUM(CASE WHEN PM.at_home THEN PM.goals ELSE 0 END) as home_goals_scored,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.goals ELSE 0 END) as away_goals_scored,
+    SUM(CASE WHEN PM.at_home THEN PM.red_card ELSE 0 END) as home_red_cards,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.red_card ELSE 0 END) as away_red_cards,
+    SUM(CASE WHEN PM.at_home THEN PM.yellow_card ELSE 0 END) as home_yellow_cards,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.yellow_card ELSE 0 END) as away_yellow_cards,
+    SUM(CASE WHEN PM.at_home THEN PM.penalties ELSE 0 END) as home_penalties,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.penalties ELSE 0 END) as away_penalties,
+    SUM(CASE WHEN PM.at_home THEN PM.own_goals ELSE 0 END) as home_ogs,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.own_goals ELSE 0 END) as away_ogs
+FROM player_matches AS PM
+INNER JOIN league_matches AS LM ON PM.match_id = LM.id
+INNER JOIN competitions AS C ON C.id = LM.competition_id
+INNER JOIN players ON PM.player_id = players.id
+INNER JOIN teams AS HT ON HT.id = LM.home_team_id
+INNER JOIN teams AS AT ON AT.id = LM.away_team_id
+WHERE C.name = $1 AND C.season = $2 AND NOT players.name = 'fakeRedCard'
+GROUP BY HT.name, AT.name, PM.match_id
+) s
+GROUP BY away_team_name
+) s
+GROUP BY team_name
+ORDER BY points DESC, goal_difference DESC, goals_scored DESC, goals_conceded DESC, wins DESC
 `
 
 type GetCompTableFromPMParams struct {
@@ -118,19 +202,41 @@ type GetCompTableFromPMParams struct {
 	Season string
 }
 
-func (q *Queries) GetCompTableFromPM(ctx context.Context, arg GetCompTableFromPMParams) ([]uuid.UUID, error) {
+type GetCompTableFromPMRow struct {
+	TeamName       string
+	MatchesPlayed  int64
+	GoalsScored    int64
+	GoalsConceded  int64
+	GoalDifference int64
+	Wins           int64
+	Draws          int64
+	Losses         int64
+	Points         int64
+}
+
+func (q *Queries) GetCompTableFromPM(ctx context.Context, arg GetCompTableFromPMParams) ([]GetCompTableFromPMRow, error) {
 	rows, err := q.db.QueryContext(ctx, getCompTableFromPM, arg.Name, arg.Season)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []uuid.UUID
+	var items []GetCompTableFromPMRow
 	for rows.Next() {
-		var player_id uuid.UUID
-		if err := rows.Scan(&player_id); err != nil {
+		var i GetCompTableFromPMRow
+		if err := rows.Scan(
+			&i.TeamName,
+			&i.MatchesPlayed,
+			&i.GoalsScored,
+			&i.GoalsConceded,
+			&i.GoalDifference,
+			&i.Wins,
+			&i.Draws,
+			&i.Losses,
+			&i.Points,
+		); err != nil {
 			return nil, err
 		}
-		items = append(items, player_id)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -177,6 +283,89 @@ func (q *Queries) GetLeagueAllTimeTopScorers(ctx context.Context) ([]GetLeagueAl
 			&i.TotalGoals,
 			&i.MatchesPlayed,
 			&i.CompetitionName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMatchRecordsFromPM = `-- name: GetMatchRecordsFromPM :many
+SELECT
+    PM.match_id as match_id,
+    HT.name as home_team_name,
+    AT.name as away_team_name,
+    SUM(CASE WHEN PM.at_home THEN PM.goals ELSE 0 END) as home_goals_scored,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.goals ELSE 0 END) as away_goals_scored,
+    SUM(CASE WHEN PM.at_home THEN PM.red_card ELSE 0 END) as home_red_cards,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.red_card ELSE 0 END) as away_red_cards,
+    SUM(CASE WHEN PM.at_home THEN PM.yellow_card ELSE 0 END) as home_yellow_cards,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.yellow_card ELSE 0 END) as away_yellow_cards,
+    SUM(CASE WHEN PM.at_home THEN PM.penalties ELSE 0 END) as home_penalties,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.penalties ELSE 0 END) as away_penalties,
+    SUM(CASE WHEN PM.at_home THEN PM.own_goals ELSE 0 END) as home_ogs,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.own_goals ELSE 0 END) as away_ogs
+FROM player_matches AS PM
+INNER JOIN league_matches AS LM ON PM.match_id = LM.id
+INNER JOIN competitions AS C ON C.id = LM.competition_id
+INNER JOIN players ON PM.player_id = players.id
+INNER JOIN teams AS HT ON HT.id = LM.home_team_id
+INNER JOIN teams AS AT ON AT.id = LM.away_team_id
+WHERE C.name = $1 AND C.season = $2 AND NOT players.name = 'fakeRedCard'
+GROUP BY HT.name, AT.name, PM.match_id
+`
+
+type GetMatchRecordsFromPMParams struct {
+	Name   string
+	Season string
+}
+
+type GetMatchRecordsFromPMRow struct {
+	MatchID         uuid.UUID
+	HomeTeamName    string
+	AwayTeamName    string
+	HomeGoalsScored int64
+	AwayGoalsScored int64
+	HomeRedCards    int64
+	AwayRedCards    int64
+	HomeYellowCards int64
+	AwayYellowCards int64
+	HomePenalties   int64
+	AwayPenalties   int64
+	HomeOgs         int64
+	AwayOgs         int64
+}
+
+func (q *Queries) GetMatchRecordsFromPM(ctx context.Context, arg GetMatchRecordsFromPMParams) ([]GetMatchRecordsFromPMRow, error) {
+	rows, err := q.db.QueryContext(ctx, getMatchRecordsFromPM, arg.Name, arg.Season)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMatchRecordsFromPMRow
+	for rows.Next() {
+		var i GetMatchRecordsFromPMRow
+		if err := rows.Scan(
+			&i.MatchID,
+			&i.HomeTeamName,
+			&i.AwayTeamName,
+			&i.HomeGoalsScored,
+			&i.AwayGoalsScored,
+			&i.HomeRedCards,
+			&i.AwayRedCards,
+			&i.HomeYellowCards,
+			&i.AwayYellowCards,
+			&i.HomePenalties,
+			&i.AwayPenalties,
+			&i.HomeOgs,
+			&i.AwayOgs,
 		); err != nil {
 			return nil, err
 		}
@@ -519,7 +708,7 @@ WHERE players.url = $1
 ) AS GAMES_IN_SCOPE
 INNER JOIN player_matches AS OTHERS ON (OTHERS.match_id = GAMES_IN_SCOPE.match_id AND OTHERS.at_home = GAMES_IN_SCOPE.target_at_home)
 INNER JOIN players AS P ON P.id = OTHERS.player_id 
-WHERE NOT OTHERS.name = 'fakeRedCard'
+WHERE NOT P.name = 'fakeRedCard'
 GROUP BY P.name, P.url, P.id
 ORDER BY total_mins_played DESC
 `

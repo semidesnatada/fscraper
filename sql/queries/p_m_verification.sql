@@ -110,7 +110,7 @@ WHERE players.url = $1
 ) AS GAMES_IN_SCOPE
 INNER JOIN player_matches AS OTHERS ON (OTHERS.match_id = GAMES_IN_SCOPE.match_id AND OTHERS.at_home = GAMES_IN_SCOPE.target_at_home)
 INNER JOIN players AS P ON P.id = OTHERS.player_id 
-WHERE NOT OTHERS.name = 'fakeRedCard'
+WHERE NOT P.name = 'fakeRedCard'
 GROUP BY P.name, P.url, P.id
 ORDER BY total_mins_played DESC;
 
@@ -244,59 +244,173 @@ ORDER BY shared_minutes DESC;
 
 
 -- name: GetCompTableFromPM :many
-SELECT player_id
-FROM player_matches
-INNER JOIN league_matches ON player_matches.match_id = league_matches.id
-INNER JOIN competitions ON league_matches.competition_id = competitions.id
-WHERE competitions.name = $1 AND competitions.season = $2
-LIMIT 20;
--- SELECT
---     P.id AS other_player_id,
---     SUM(CASE WHEN LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min)> 0 THEN LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min) ELSE 0 END) as shared_minutes
--- FROM (
--- SELECT
---     match_id,
---     at_home AS target_at_home,
---     first_minute AS t_first_min,
---     last_minute AS t_last_min
--- FROM player_matches
--- INNER JOIN players ON players.id = player_matches.player_id
--- WHERE players.id = '2ca05eba-1817-4e10-8099-548f5f6e5d99'
--- ) AS GAMES_IN_SCOPE
--- INNER JOIN player_matches AS OTHERS ON (OTHERS.match_id = GAMES_IN_SCOPE.match_id AND OTHERS.at_home = GAMES_IN_SCOPE.target_at_home)
--- RIGHT JOIN players AS P ON P.id = OTHERS.player_id 
--- GROUP BY P.name, P.url, P.id
--- HAVING SUM(CASE WHEN LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min)> 0 THEN LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min) ELSE 0 END) > 0
--- ORDER BY shared_minutes DESC;
+SELECT
+    team_name,
+    SUM(matches_played) as matches_played,
+    SUM(goals_scored) as goals_scored,
+    SUM(goals_conceded) as goals_conceded,
+    SUM(goal_difference) as goal_difference,
+    SUM(wins) as wins,
+    SUM(draws) as draws,
+    SUM(losses) as losses,
+    SUM(points) as points
+FROM (
+SELECT
+    home_team_name as team_name,
+    COUNT(*) as matches_played,
+    SUM(home_goals_scored) + SUM(away_ogs) as goals_scored,
+    SUM(away_goals_scored) + SUM(home_ogs) as goals_conceded,
+    SUM(home_goals_scored) + SUM(away_ogs) - SUM(away_goals_scored) - SUM(home_ogs) as goal_difference,
+    SUM(CASE WHEN home_goals_scored + away_ogs > away_goals_scored + home_ogs THEN 1 ELSE 0 END) as wins,
+    SUM(CASE WHEN home_goals_scored + away_ogs = away_goals_scored + home_ogs THEN 1 ELSE 0 END) as draws,
+    SUM(CASE WHEN home_goals_scored + away_ogs < away_goals_scored + home_ogs THEN 1 ELSE 0 END) as losses,
+    SUM((CASE WHEN home_goals_scored + away_ogs > away_goals_scored + home_ogs THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals_scored + away_ogs = away_goals_scored + home_ogs THEN 1 ELSE 0 END)) as points
+FROM (SELECT
+    PM.match_id as match_id,
+    HT.name as home_team_name,
+    AT.name as away_team_name,
+    SUM(CASE WHEN PM.at_home THEN PM.goals ELSE 0 END) as home_goals_scored,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.goals ELSE 0 END) as away_goals_scored,
+    SUM(CASE WHEN PM.at_home THEN PM.red_card ELSE 0 END) as home_red_cards,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.red_card ELSE 0 END) as away_red_cards,
+    SUM(CASE WHEN PM.at_home THEN PM.yellow_card ELSE 0 END) as home_yellow_cards,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.yellow_card ELSE 0 END) as away_yellow_cards,
+    SUM(CASE WHEN PM.at_home THEN PM.penalties ELSE 0 END) as home_penalties,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.penalties ELSE 0 END) as away_penalties,
+    SUM(CASE WHEN PM.at_home THEN PM.own_goals ELSE 0 END) as home_ogs,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.own_goals ELSE 0 END) as away_ogs
+FROM player_matches AS PM
+INNER JOIN league_matches AS LM ON PM.match_id = LM.id
+INNER JOIN competitions AS C ON C.id = LM.competition_id
+INNER JOIN players ON PM.player_id = players.id
+INNER JOIN teams AS HT ON HT.id = LM.home_team_id
+INNER JOIN teams AS AT ON AT.id = LM.away_team_id
+WHERE C.name = $1 AND C.season = $2 AND NOT players.name = 'fakeRedCard'
+GROUP BY HT.name, AT.name, PM.match_id
+) s
+GROUP BY home_team_name
+UNION ALL
+SELECT
+    away_team_name as team_name,
+    COUNT(*) as matches_played,
+    SUM(away_goals_scored) + SUM(home_ogs) as goals_scored,
+    SUM(home_goals_scored) + SUM(away_ogs) as goals_conceded,
+    SUM(away_goals_scored) + SUM(home_ogs) - SUM(home_goals_scored) - SUM(away_ogs) as goal_difference,
+    SUM(CASE WHEN home_goals_scored + away_ogs < away_goals_scored + home_ogs THEN 1 ELSE 0 END) as wins,
+    SUM(CASE WHEN home_goals_scored + away_ogs = away_goals_scored + home_ogs THEN 1 ELSE 0 END) as draws,
+    SUM(CASE WHEN home_goals_scored + away_ogs > away_goals_scored + home_ogs THEN 1 ELSE 0 END) as losses,
+    SUM((CASE WHEN home_goals_scored + away_ogs < away_goals_scored + home_ogs THEN 1 ELSE 0 END)*3 + (CASE WHEN home_goals_scored + away_ogs = away_goals_scored + home_ogs THEN 1 ELSE 0 END)) as points
+FROM (SELECT
+    PM.match_id as match_id,
+    HT.name as home_team_name,
+    AT.name as away_team_name,
+    SUM(CASE WHEN PM.at_home THEN PM.goals ELSE 0 END) as home_goals_scored,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.goals ELSE 0 END) as away_goals_scored,
+    SUM(CASE WHEN PM.at_home THEN PM.red_card ELSE 0 END) as home_red_cards,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.red_card ELSE 0 END) as away_red_cards,
+    SUM(CASE WHEN PM.at_home THEN PM.yellow_card ELSE 0 END) as home_yellow_cards,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.yellow_card ELSE 0 END) as away_yellow_cards,
+    SUM(CASE WHEN PM.at_home THEN PM.penalties ELSE 0 END) as home_penalties,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.penalties ELSE 0 END) as away_penalties,
+    SUM(CASE WHEN PM.at_home THEN PM.own_goals ELSE 0 END) as home_ogs,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.own_goals ELSE 0 END) as away_ogs
+FROM player_matches AS PM
+INNER JOIN league_matches AS LM ON PM.match_id = LM.id
+INNER JOIN competitions AS C ON C.id = LM.competition_id
+INNER JOIN players ON PM.player_id = players.id
+INNER JOIN teams AS HT ON HT.id = LM.home_team_id
+INNER JOIN teams AS AT ON AT.id = LM.away_team_id
+WHERE C.name = $1 AND C.season = $2 AND NOT players.name = 'fakeRedCard'
+GROUP BY HT.name, AT.name, PM.match_id
+) s
+GROUP BY away_team_name
+) s
+GROUP BY team_name
+ORDER BY points DESC, goal_difference DESC, goals_scored DESC, goals_conceded DESC, wins DESC;
+
+-- name: GetMatchRecordsFromPM :many
+SELECT
+    PM.match_id as match_id,
+    HT.name as home_team_name,
+    AT.name as away_team_name,
+    SUM(CASE WHEN PM.at_home THEN PM.goals ELSE 0 END) as home_goals_scored,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.goals ELSE 0 END) as away_goals_scored,
+    SUM(CASE WHEN PM.at_home THEN PM.red_card ELSE 0 END) as home_red_cards,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.red_card ELSE 0 END) as away_red_cards,
+    SUM(CASE WHEN PM.at_home THEN PM.yellow_card ELSE 0 END) as home_yellow_cards,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.yellow_card ELSE 0 END) as away_yellow_cards,
+    SUM(CASE WHEN PM.at_home THEN PM.penalties ELSE 0 END) as home_penalties,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.penalties ELSE 0 END) as away_penalties,
+    SUM(CASE WHEN PM.at_home THEN PM.own_goals ELSE 0 END) as home_ogs,
+    SUM(CASE WHEN NOT PM.at_home THEN PM.own_goals ELSE 0 END) as away_ogs
+FROM player_matches AS PM
+INNER JOIN league_matches AS LM ON PM.match_id = LM.id
+INNER JOIN competitions AS C ON C.id = LM.competition_id
+INNER JOIN players ON PM.player_id = players.id
+INNER JOIN teams AS HT ON HT.id = LM.home_team_id
+INNER JOIN teams AS AT ON AT.id = LM.away_team_id
+WHERE C.name = $1 AND C.season = $2 AND NOT players.name = 'fakeRedCard'
+GROUP BY HT.name, AT.name, PM.match_id;
+
+
 
 -- SELECT
---     P.id AS other_player_id,
---     SUM(CASE WHEN LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min)> 0 THEN LEAST(OTHERS.last_minute, t_last_min) - GREATEST(OTHERS.first_minute, t_first_min) ELSE 0 END) as shared_minutes
--- FROM (
+--     team_name,
+--     SUM(home_goals_scored) + SUM(away_goals_scored) as total_goals_scored,
+--     SUM(home_goals_conceded) + SUM(away_goals_conceded) as total_goals_conceded,
+--     SUM(home_goals_scored) + SUM(away_goals_scored) - SUM(home_goals_conceded) - SUM(away_goals_conceded) as goal_difference,
+--     -- SUM(wins) as total_wins,
+--     -- SUM(draws) as total_draws,
+--     -- SUM(losses) as total_losses,
+--     -- SUM(points) as total_points,
+--     SUM((CASE WHEN home_goals_scored>home_goals_conceded THEN 1 ELSE 0 END)+(CASE WHEN away_goals_scored>away_goals_conceded THEN 1 ELSE 0 END)) AS wins,
+--     SUM((CASE WHEN home_goals_scored=home_goals_conceded THEN 1 ELSE 0 END)+(CASE WHEN away_goals_scored=away_goals_conceded THEN 1 ELSE 0 END)) AS draws,
+--     SUM((CASE WHEN home_goals_scored<home_goals_conceded THEN 1 ELSE 0 END)+(CASE WHEN away_goals_scored<away_goals_conceded THEN 1 ELSE 0 END)) AS losses,
+--     -- SUM((CASE WHEN goals_scored>goals_conceded THEN 1 ELSE 0 END)*3 + (CASE WHEN goals_scored=goals_conceded THEN 1 ELSE 0 END)) AS points,
+--     COUNT(DISTINCT match_id) as matches_played,
+--     -- COUNT(DISTINCT player_id) as players_fielded,
+--     SUM(red_cards) as total_red_cards,
+--     SUM(yellow_cards) as total_yellow_cards,
+--     SUM(pens) as total_pens,
+--     SUM(ogs) as total_ogs
+-- FROM(
 -- SELECT
---     match_id,
---     at_home AS target_at_home,
---     first_minute AS t_first_min,
---     last_minute AS t_last_min
--- FROM player_matches
--- INNER JOIN players ON players.id = player_matches.player_id
--- WHERE players.id = '2ca05eba-1817-4e10-8099-548f5f6e5d99'
--- ) AS GAMES_IN_SCOPE
--- INNER JOIN player_matches AS OTHERS ON (OTHERS.match_id = GAMES_IN_SCOPE.match_id AND OTHERS.at_home = GAMES_IN_SCOPE.target_at_home)
--- RIGHT JOIN players AS P ON P.id = OTHERS.player_id 
--- GROUP BY P.name, P.url, P.id
--- ORDER BY shared_minutes DESC;
--- c630f533-f54a-407c-9774-8f0be8801f74
-
-    -- match_id,
-    -- player_id,
-    -- match_url,
-    -- first_minute,
-    -- last_minute,
-    -- goals,
-    -- penalties,
-    -- yellow_card,
-    -- red_card,
-    -- own_goals,
-    -- is_knockout,
-    -- at_home
+--     PM.match_id as match_id,
+--     SUM(CASE WHEN PM.at_home IS TRUE THEN PM.goals ELSE 0 END) as home_goals_scored,
+--     SUM(CASE WHEN PM.at_home IS FALSE THEN PM.goals ELSE 0 END) as home_goals_conceded,
+--     0 as away_goals_scored,
+--     0 as away_goals_conceded,
+--     SUM(CASE WHEN PM.at_home IS TRUE THEN PM.red_card ELSE 0 END) as red_cards,
+--     SUM(CASE WHEN PM.at_home IS TRUE THEN PM.yellow_card ELSE 0 END) as yellow_cards,
+--     SUM(CASE WHEN PM.at_home IS TRUE THEN PM.penalties ELSE 0 END) as pens,
+--     SUM(CASE WHEN PM.at_home IS TRUE THEN PM.own_goals ELSE 0 END) as ogs,
+--     HT.name as team_name
+-- FROM player_matches AS PM
+-- INNER JOIN league_matches AS LM ON PM.match_id = LM.id
+-- INNER JOIN teams AS HT ON HT.id = LM.home_team_id
+-- INNER JOIN competitions AS C ON C.id = LM.competition_id
+-- INNER JOIN players ON PM.player_id = players.id 
+-- WHERE C.name = $1 AND C.season = $2 AND NOT players.name = 'fakeRedCard'
+-- GROUP BY team_name, match_id
+-- UNION ALL
+-- SELECT
+--     PM.match_id as match_id,
+--     0 as home_goals_scored,
+--     0 as home_goals_conceded,
+--     SUM(CASE WHEN PM.at_home IS FALSE THEN PM.goals ELSE 0 END) as away_goals_scored,
+--     SUM(CASE WHEN PM.at_home IS TRUE THEN PM.goals ELSE 0 END) as away_goals_conceded,
+--     SUM(CASE WHEN PM.at_home IS FALSE THEN PM.red_card ELSE 0 END) as red_cards,
+--     SUM(CASE WHEN PM.at_home IS FALSE THEN PM.yellow_card ELSE 0 END) as yellow_cards,
+--     SUM(CASE WHEN PM.at_home IS FALSE THEN PM.penalties ELSE 0 END) as pens,
+--     SUM(CASE WHEN PM.at_home IS FALSE THEN PM.own_goals ELSE 0 END) as ogs,
+--     AT.name as team_name
+-- FROM player_matches AS PM
+-- INNER JOIN league_matches AS LM ON PM.match_id = LM.id
+-- INNER JOIN teams AS AT ON AT.id = LM.away_team_id
+-- INNER JOIN competitions AS C ON C.id = LM.competition_id
+-- INNER JOIN players ON PM.player_id = players.id 
+-- WHERE C.name = $1 AND C.season = $2 AND NOT players.name = 'fakeRedCard'
+-- GROUP BY team_name, match_id
+-- ) s
+-- GROUP BY team_name
+-- ORDER BY total_goals_scored DESC;
